@@ -47,7 +47,6 @@ def plot_single_point(ifiles,labels,**args):
         fit_params=[]
         for i in range(num):
             fit_params.append(curve_fit(fano_fit,xdata[i],ydata[i],p0=[-5,2.6,0.1],bounds=([-20,2.2,0.05],[0,2.9,1.0]))[0])
-        print(fit_params)
             
     plt.figure()
     for i in range(num):

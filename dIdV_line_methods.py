@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import rhksm4
 from scipy.optimize import curve_fit
 from scipy.fft import fft,fftfreq
-from scipy.signal.window import hann
+from scipy.signal.windows import hann
 
 import numpy as np
 

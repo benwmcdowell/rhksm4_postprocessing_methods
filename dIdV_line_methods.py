@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import rhksm4
 from scipy.optimize import curve_fit
 from scipy.fft import fft,fftfreq
+from scipy.signal.window import hann
 
 import numpy as np
 
@@ -66,13 +67,19 @@ class dIdV_line:
         plt.tight_layout()
         fig.show()
         
-    def plot_fft(self):
+    def plot_fft(self,**args):
         fig,ax=plt.subplots(1,1)
+        if 'window' in args:
+            w=hann(self.size,sym=True)
+        else:
+            w=np.array([1.0 for i in range(self.size)])
         zf=np.zeros((self.npts,self.size//2))
         xf=np.zeros((self.npts,self.size//2))
         for i in range(self.npts):
-            zf[i]+=np.abs(fft(self.LIAcurrent[i])[0:self.size//2])*2.0/self.size
+            zf[i]+=np.abs(fft(self.LIAcurrent[i]*w)[0:self.size//2])*2.0/self.size
             xf[i]+=fftfreq(self.size,(self.pos[-1]-self.pos[0])/(self.size-1))[:self.size//2]
         y=np.array([[self.energy[j] for i in range(self.size//2)] for j in range(self.npts)])
         plt.pcolormesh(xf,y,zf,cmap='jet',shading='nearest')
-        plt.show()
+        ax.set(ylabel='bias / eV')
+        ax.set(xlabel='momentum / $\AA^{-1}$')
+        fig.show()

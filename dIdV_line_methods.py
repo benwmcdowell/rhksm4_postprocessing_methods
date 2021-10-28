@@ -30,6 +30,7 @@ class dIdV_line:
         self.pos=abs(self.pos-max(self.pos)) #postion along line in $\AA$
         self.LIAcurrent=self.LIAcurrent[0,:,:].T[::-1]*1.0e12 #LIAcurrent in pA
         self.current=self.current[0,:,:].T[::-1]*1.0e12 #current in pA
+        
     def normalize(self,**args):
         if 'range' in args:
             norm_range=[]
@@ -58,14 +59,58 @@ class dIdV_line:
             self.LIAcurrent[i]-=fit
         
     def plot_dIdV_line(self):
-        fig,ax=plt.subplots(1,1)
+        self.fig_main,self.ax_main=plt.subplots(1,1,tight_layout=True)
         x=np.array([[self.pos[i] for i in range(self.size)] for j in range(self.npts)])
         y=np.array([[self.energy[j] for i in range(self.size)] for j in range(self.npts)])
-        dIdVmap=ax.pcolormesh(x,y,self.LIAcurrent,cmap='jet',shading='nearest')
-        ax.set(xlabel='position / $\AA$')
-        ax.set(ylabel='bias / V')
-        plt.tight_layout()
-        fig.show()
+        self.dIdVmap=self.ax_main.pcolormesh(x,y,self.LIAcurrent,cmap='jet',shading='nearest')
+        self.ax_main.set(xlabel='position / $\AA$')
+        self.ax_main.set(ylabel='bias / V')
+        self.fig_main.show()
+        
+    def overlay_bounds(self,pos):
+        for i in pos:
+            self.boundline=self.ax_main.plot([self.pos[0],self.pos[-1]],[i,i],color='white',linestyle='dashed')
+        self.fig_main.canvas.draw()
+        
+    def overlay_center(self,pos):
+        self.centerline=self.ax_main.plot([pos,pos],[self.energy[0],self.energy[-1]],color='white',linestyle='dashed')
+        
+    def find_scattering_length(self,emin,emax,center,**args):
+        center=np.argmin(abs(self.pos-center))
+        emin=np.argmin(abs(self.energy-emin))
+        emax=np.argmin(abs(self.energy-emax))
+        
+        if 'peak_width' in args:
+            peak_width=int(args['peak_width'])
+        else:
+            peak_width=5
+            
+        energies=[]
+        lengths=[]
+        
+        for i in range(emin,emax):
+            energies.append(self.energy[i])
+            tempmax=0.0
+            for j in range(center):
+                tempvar=np.average(self.LIAcurrent[i,(center-j)-peak_width:(center-j)+peak_width+1])
+                if tempvar>tempmax:
+                    tempmax=tempvar
+                    max_index=center-j
+                    
+            left_peak=max_index
+                 
+            tempmax=0.0
+            for j in range(len(self.pos)-center-peak_width-1):
+                tempvar=np.average(self.LIAcurrent[i,(center+j)-peak_width:(center+j)+peak_width+1])
+                if tempvar>tempmax:
+                    tempmax=tempvar
+                    max_index=center+j
+                        
+            right_peak=max_index
+                           
+            lengths.append(self.pos[right_peak]-self.pos[left_peak])
+            
+        return energies,lengths
         
     def plot_fft(self,**args):
         fig,ax=plt.subplots(1,1)

@@ -58,14 +58,33 @@ class dIdV_line:
             fit=model_cosine(self.pos,params[0][0],params[0][1],params[0][2])
             self.LIAcurrent[i]-=fit
         
-    def plot_dIdV_line(self):
+    def plot_dIdV_line(self,**args):
+        if 'cmap' in args:
+            cmap=args['cmap']
+        else:
+            cmap=plt.rcParams['image.cmap']
+        
         self.fig_main,self.ax_main=plt.subplots(1,1,tight_layout=True)
         x=np.array([[self.pos[i] for i in range(self.size)] for j in range(self.npts)])
         y=np.array([[self.energy[j] for i in range(self.size)] for j in range(self.npts)])
-        self.dIdVmap=self.ax_main.pcolormesh(x,y,self.LIAcurrent,cmap='jet',shading='nearest')
+        self.dIdVmap=self.ax_main.pcolormesh(x,y,self.LIAcurrent,cmap=cmap,shading='nearest')
         self.ax_main.set(xlabel='position / $\AA$')
         self.ax_main.set(ylabel='bias / V')
         self.fig_main.show()
+        
+    def plot_energy_slice(self,energy):
+        self.fig_eslice,self.ax_eslice=plt.subplots(1,1,tight_layout=True)
+        if type(energy)==list:
+            for e in energy:
+                i=np.argmin(abs(self.energy-e))
+                self.ax_eslice.plot(self.pos,self.LIAcurrent[i],label=e)
+        else:
+            i=np.argmin(abs(self.energy-energy))
+            self.ax_eslice.plot(self.pos,self.LIAcurrent[i])
+        self.ax_eslice.set(xlabel='position / $\AA$')
+        self.ax_eslice.set(ylabel='dI/dV / pA')
+        self.ax_eslice.legend()
+        self.fig_eslice.show()
         
     def overlay_bounds(self,pos):
         for i in pos:

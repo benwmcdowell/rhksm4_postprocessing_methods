@@ -100,19 +100,29 @@ class dIdV_line:
         center=np.argmin(abs(self.pos-center))
         emin=np.argmin(abs(self.energy-emin))
         emax=np.argmin(abs(self.energy-emax))
+        if 'xrange' in args:
+            xmin=np.argmin(abs(self.pos-args['xrange'][0]))
+            xmax=np.argmin(abs(self.pos-args['xrange'][1]))
         
         if 'peak_width' in args:
             peak_width=int(args['peak_width'])
         else:
             peak_width=5
             
+        if 'overlay_peaks' in args:
+            overlay_peaks=args['overlay_peaks']
+        else:
+            overlay_peaks=True
+            
         energies=[]
         lengths=[]
+        peak_pos=[]
+        peak_energies=[]
         
         for i in range(emin,emax):
             energies.append(self.energy[i])
             tempmax=0.0
-            for j in range(center):
+            for j in range(center-xmin-peak_width):
                 tempvar=np.average(self.LIAcurrent[i,(center-j)-peak_width:(center-j)+peak_width+1])
                 if tempvar>tempmax:
                     tempmax=tempvar
@@ -121,7 +131,7 @@ class dIdV_line:
             left_peak=max_index
                  
             tempmax=0.0
-            for j in range(len(self.pos)-center-peak_width-1):
+            for j in range(len(self.pos)-center-peak_width-1-xmax):
                 tempvar=np.average(self.LIAcurrent[i,(center+j)-peak_width:(center+j)+peak_width+1])
                 if tempvar>tempmax:
                     tempmax=tempvar
@@ -130,6 +140,12 @@ class dIdV_line:
             right_peak=max_index
                            
             lengths.append(self.pos[right_peak]-self.pos[left_peak])
+            for j in [right_peak,left_peak]:
+                peak_pos.append(self.pos[j])
+                peak_energies.append(self.energy[i])
+            
+        if overlay_peaks:
+            self.ax_main.scatter(peak_pos,peak_energies)
             
         return energies,lengths
         

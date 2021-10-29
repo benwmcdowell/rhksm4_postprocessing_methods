@@ -78,9 +78,11 @@ class dIdV_line:
             for e in energy:
                 i=np.argmin(abs(self.energy-e))
                 self.ax_eslice.plot(self.pos,self.LIAcurrent[i],label=e)
+                self.ax_main.plot([self.pos[0],self.pos[-1]],[e,e])
         else:
             i=np.argmin(abs(self.energy-energy))
             self.ax_eslice.plot(self.pos,self.LIAcurrent[i])
+            self.ax_main.plot([self.pos[0],self.pos[-1]],[e,e])
         self.ax_eslice.set(xlabel='position / $\AA$')
         self.ax_eslice.set(ylabel='dI/dV / pA')
         self.ax_eslice.legend()

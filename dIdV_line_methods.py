@@ -89,6 +89,22 @@ class dIdV_line:
         self.ax_eslice.legend()
         self.fig_eslice.show()
         
+    def plot_position_slice(self,pos):
+        self.fig_pslice,self.ax_pslice=plt.subplots(1,1,tight_layout=True)
+        if type(pos)==list:
+            for p in pos:
+                i=np.argmin(abs(self.pos-p))
+                self.ax_pslice.plot(self.energy,self.LIAcurrent[:,i],label=p)
+                self.ax_main.plot([p,p],[self.energy[0],self.energy[-1]])
+        else:
+            i=np.argmin(abs(self.pos-pos))
+            self.ax_pslice.plot(self.energy,self.LIAcurrent[:,i],label=pos)
+            self.ax_main.plot([pos,],[self.energy[0],self.energy[-1]])
+        self.ax_pslice.set(xlabel='bias / eV')
+        self.ax_pslice.set(ylabel='dI/dV / pA')
+        self.ax_pslice.legend()
+        self.fig_pslice.show()
+        
     def overlay_bounds(self,pos):
         for i in pos:
             self.boundline=self.ax_main.plot([self.pos[0],self.pos[-1]],[i,i],color='white',linestyle='dashed')

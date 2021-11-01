@@ -99,7 +99,7 @@ class dIdV_line:
         else:
             i=np.argmin(abs(self.pos-pos))
             self.ax_pslice.plot(self.energy,self.LIAcurrent[:,i],label=pos)
-            self.ax_main.plot([pos,],[self.energy[0],self.energy[-1]])
+            self.ax_main.plot([pos,pos],[self.energy[0],self.energy[-1]])
         self.ax_pslice.set(xlabel='bias / eV')
         self.ax_pslice.set(ylabel='dI/dV / pA')
         self.ax_pslice.legend()

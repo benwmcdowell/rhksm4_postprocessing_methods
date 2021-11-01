@@ -4,8 +4,8 @@ from scipy.optimize import curve_fit
 from scipy.fft import fft,fftfreq
 from scipy.signal.windows import hann
 from scipy.signal import savgol_filter
-from copy import deepcopy
 import numpy as np
+import sys
 
 class dIdV_line:
     def __init__(self,ifile,**args):
@@ -98,8 +98,12 @@ class dIdV_line:
         self.centerline=self.ax_main.plot([pos,pos],[self.energy[0],self.energy[-1]],color='white',linestyle='dashed')
         
     def find_scattering_length(self,emin,emax,center,**args):
-        def gauss_fit(x,A,s,x1,x2,y0):
-            y=A*(np.exp(-(x-x1)**2/s)+np.exp(-(x-x2)**2/s))+y0
+        def gauss_fit(x,x1,x2,A,s,y0):
+            y=A*np.exp(-(x-x1)**2/s/2)+A*np.exp(-(x-x2)**2/s/2)+y0
+            return y
+        
+        def line_fit(x,a,b):
+            y=a*x+b
             return y
         
         center=np.argmin(abs(self.pos-center))
@@ -118,6 +122,11 @@ class dIdV_line:
         else:
             overlay_peaks=True
             
+        if 'onset' in args:
+            onset_energy=args['onset']
+        else:
+            onset_energy=0.0
+            
         energies=[]
         lengths=[]
         peak_pos=[]
@@ -125,73 +134,41 @@ class dIdV_line:
         errors=[]
         
         for i in range(emin,emax):
-            p0=[max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),0.5,(self.pos[center]-self.pos[xmin])/2,(self.pos[xmax]-self.pos[center])/2,min(self.LIAcurrent[i,xmin:xmax])]
+            p0=[(self.pos[center]+self.pos[xmin])/2,(self.pos[xmax]+self.pos[center])/2,max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),0.5,min(self.LIAcurrent[i,xmin:xmax])]
             popt,pcov=curve_fit(gauss_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0)
                            
-            lengths.append(abs(popt[2]-popt[3]))
-            for j in range(2,4):
+            lengths.append(abs(popt[0]-popt[1]))
+            energies.append(self.energy[i])
+            for j in range(2):
                 peak_pos.append(popt[j])
                 peak_energies.append(self.energy[i])
                 pcov=np.sqrt(np.diag(pcov))
-                errors.append(np.sqrt(pcov[2]**2+pcov[3]**2))
+                errors.append(np.sqrt(pcov[0]**2+pcov[1]**2))
             
         if overlay_peaks:
             self.ax_main.scatter(peak_pos,peak_energies)
+            
+        self.fig_fit,self.ax_fit=plt.subplots(1,1,tight_layout=True)
+        energies=np.array(energies)
+        lengths=np.array(lengths)
+        errors=np.array(lengths)
+        k=1.6022e-19 #J/eV
+        energies-=onset_energy
+        energies*=k
+        lengths*=1e-10
+        h=6.626e-34 #J*s
+        m=9.10938356e-31 #kg
+        tempx=h/np.sqrt(energies)/np.sqrt(2)
+        self.ax_fit.scatter(tempx,lengths,label='raw data')
+        popt,pcov=curve_fit(line_fit,tempx,lengths,p0=[3/np.sqrt(m),0.0],sigma=errors)
+        self.ax_fit.plot(tempx,line_fit(tempx,popt[0],popt[1]),label='fit')
+        self.ax_fit.legend()
+        self.fig_fit.show()
+        pcov=np.sqrt(np.diag(pcov))
+        print('m* = {} +/- {}'.format(popt[0]**-2/m,pcov[0]/popt[0]**3/m))
+        print('R = {} +/- {} Angstroms'.format(popt[1]*1e10,pcov[1]*1e10))
             
         return energies,lengths,errors
-        
-    def find_scattering_length_old(self,emin,emax,center,**args):
-        center=np.argmin(abs(self.pos-center))
-        emin=np.argmin(abs(self.energy-emin))
-        emax=np.argmin(abs(self.energy-emax))
-        if 'xrange' in args:
-            xmin=np.argmin(abs(self.pos-args['xrange'][0]))
-            xmax=np.argmin(abs(self.pos-args['xrange'][1]))
-        
-        if 'peak_width' in args:
-            peak_width=int(args['peak_width'])
-        else:
-            peak_width=5
-            
-        if 'overlay_peaks' in args:
-            overlay_peaks=args['overlay_peaks']
-        else:
-            overlay_peaks=True
-            
-        energies=[]
-        lengths=[]
-        peak_pos=[]
-        peak_energies=[]
-        
-        for i in range(emin,emax):
-            energies.append(self.energy[i])
-            tempmax=0.0
-            for j in range(center-xmin-peak_width):
-                tempvar=np.average(self.LIAcurrent[i,(center-j)-peak_width:(center-j)+peak_width+1])
-                if tempvar>tempmax:
-                    tempmax=tempvar
-                    max_index=center-j
-                    
-            left_peak=max_index
-                 
-            tempmax=0.0
-            for j in range(len(self.pos)-center-peak_width-1-(len(self.pos)-xmax)):
-                tempvar=np.average(self.LIAcurrent[i,(center+j)-peak_width:(center+j)+peak_width+1])
-                if tempvar>tempmax:
-                    tempmax=tempvar
-                    max_index=center+j
-                        
-            right_peak=max_index
-                           
-            lengths.append(self.pos[right_peak]-self.pos[left_peak])
-            for j in [right_peak,left_peak]:
-                peak_pos.append(self.pos[j])
-                peak_energies.append(self.energy[i])
-            
-        if overlay_peaks:
-            self.ax_main.scatter(peak_pos,peak_energies)
-            
-        return energies,lengths
         
     def plot_fft(self,**args):
         fig,ax=plt.subplots(1,1)

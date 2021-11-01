@@ -3,7 +3,8 @@ import rhksm4
 from scipy.optimize import curve_fit
 from scipy.fft import fft,fftfreq
 from scipy.signal.windows import hann
-
+from scipy.signal import savgol_filter
+from copy import deepcopy
 import numpy as np
 
 class dIdV_line:
@@ -97,6 +98,49 @@ class dIdV_line:
         self.centerline=self.ax_main.plot([pos,pos],[self.energy[0],self.energy[-1]],color='white',linestyle='dashed')
         
     def find_scattering_length(self,emin,emax,center,**args):
+        def gauss_fit(x,A,s,x1,x2,y0):
+            y=A*(np.exp(-(x-x1)**2/s)+np.exp(-(x-x2)**2/s))+y0
+            return y
+        
+        center=np.argmin(abs(self.pos-center))
+        emin=np.argmin(abs(self.energy-emin))
+        emax=np.argmin(abs(self.energy-emax))
+        
+        if 'xrange' in args:
+            xmin=np.argmin(abs(self.pos-args['xrange'][0]))
+            xmax=np.argmin(abs(self.pos-args['xrange'][1]))
+        else:
+            xmin=0
+            xmax=len(self.pos)-1
+        
+        if 'overlay_peaks' in args:
+            overlay_peaks=args['overlay_peaks']
+        else:
+            overlay_peaks=True
+            
+        energies=[]
+        lengths=[]
+        peak_pos=[]
+        peak_energies=[]
+        errors=[]
+        
+        for i in range(emin,emax):
+            p0=[max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),0.5,(self.pos[center]-self.pos[xmin])/2,(self.pos[xmax]-self.pos[center])/2,min(self.LIAcurrent[i,xmin:xmax])]
+            popt,pcov=curve_fit(gauss_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0)
+                           
+            lengths.append(abs(popt[2]-popt[3]))
+            for j in range(2,4):
+                peak_pos.append(popt[j])
+                peak_energies.append(self.energy[i])
+                pcov=np.sqrt(np.diag(pcov))
+                errors.append(np.sqrt(pcov[2]**2+pcov[3]**2))
+            
+        if overlay_peaks:
+            self.ax_main.scatter(peak_pos,peak_energies)
+            
+        return energies,lengths,errors
+        
+    def find_scattering_length_old(self,emin,emax,center,**args):
         center=np.argmin(abs(self.pos-center))
         emin=np.argmin(abs(self.energy-emin))
         emax=np.argmin(abs(self.energy-emax))
@@ -131,7 +175,7 @@ class dIdV_line:
             left_peak=max_index
                  
             tempmax=0.0
-            for j in range(len(self.pos)-center-peak_width-1-xmax):
+            for j in range(len(self.pos)-center-peak_width-1-(len(self.pos)-xmax)):
                 tempvar=np.average(self.LIAcurrent[i,(center+j)-peak_width:(center+j)+peak_width+1])
                 if tempvar>tempmax:
                     tempmax=tempvar
@@ -165,3 +209,9 @@ class dIdV_line:
         ax.set(ylabel='bias / eV')
         ax.set(xlabel='momentum / $\AA^{-1}$')
         fig.show()
+        
+    def add_savgol_filter(self,w,o):
+        for i in range(len(self.energy)):
+            self.LIAcurrent[i]=savgol_filter(self.LIAcurrent[i],w,o)
+        for i in range(len(self.pos)):
+            self.LIAcurrent[:,i]=savgol_filter(self.LIAcurrent[:,i],w,o)

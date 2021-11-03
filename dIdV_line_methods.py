@@ -83,7 +83,7 @@ class dIdV_line:
         else:
             i=np.argmin(abs(self.energy-energy))
             self.ax_eslice.plot(self.pos,self.LIAcurrent[i])
-            self.ax_main.plot([self.pos[0],self.pos[-1]],[e,e])
+            self.ax_main.plot([self.pos[0],self.pos[-1]],[energy,energy])
         self.ax_eslice.set(xlabel='position / $\AA$')
         self.ax_eslice.set(ylabel='dI/dV / pA')
         self.ax_eslice.legend()
@@ -151,18 +151,19 @@ class dIdV_line:
         
         for i in range(emin,emax):
             p0=[(self.pos[center]+self.pos[xmin])/2,(self.pos[xmax]+self.pos[center])/2,max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),0.5,min(self.LIAcurrent[i,xmin:xmax])]
-            popt,pcov=curve_fit(gauss_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0)
+            bounds=([self.pos[xmin],self.pos[center],0,0,-np.inf],[self.pos[center],self.pos[xmax],np.inf,np.inf,np.inf])
+            popt,pcov=curve_fit(gauss_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
                            
             lengths.append(abs(popt[0]-popt[1]))
             energies.append(self.energy[i])
+            pcov=np.sqrt(np.diag(pcov))
             for j in range(2):
                 peak_pos.append(popt[j])
                 peak_energies.append(self.energy[i])
-                pcov=np.sqrt(np.diag(pcov))
                 errors.append(np.sqrt(pcov[0]**2+pcov[1]**2))
             
         if overlay_peaks:
-            self.ax_main.scatter(peak_pos,peak_energies)
+            self.ax_main.errorbar(peak_pos,peak_energies,xerr=errors,fmt='o')
             
         self.fig_fit,self.ax_fit=plt.subplots(1,1,tight_layout=True)
         energies=np.array(energies)
@@ -182,7 +183,7 @@ class dIdV_line:
         self.fig_fit.show()
         pcov=np.sqrt(np.diag(pcov))
         print('m* = {} +/- {}'.format(popt[0]**-2/m,pcov[0]/popt[0]**3/m))
-        print('R = {} +/- {} Angstroms'.format(popt[1]*1e10,pcov[1]*1e10))
+        print('R = {} +/- {} Angstroms'.format(popt[1]*-1e10,pcov[1]*1e10))
             
         return energies,lengths,errors
         

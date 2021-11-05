@@ -180,15 +180,13 @@ class dIdV_line:
         popt,pcov=curve_fit(line_fit,tempx,lengths,p0=[3/np.sqrt(m),0.0],sigma=errors)
         self.ax_fit.plot(tempx,line_fit(tempx,popt[0],popt[1]),label='fit')
         self.ax_fit.legend()
-        self.ax_fit.set(xlabel='$2^{-1/2}$h$E^{-1/2}$ / m $kg^{-1/2}$')
+        self.ax_fit.set(xlabel='$2^{-1/2}$h$E^{-1/2}$ / m $kg^{1/2}$')
         self.ax_fit.set(ylabel='d / m')
         self.fig_fit.show()
         pcov=np.sqrt(np.diag(pcov))
         print('m* = {} +/- {}'.format(popt[0]**-2/m,pcov[0]/popt[0]**3/m))
         print('R = {} +/- {} Angstroms'.format(popt[1]*-1e10,pcov[1]*1e10))
             
-        return energies,lengths,errors
-        
     def plot_fft(self,**args):
         fig,ax=plt.subplots(1,1)
         if 'window' in args:

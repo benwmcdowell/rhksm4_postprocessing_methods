@@ -94,29 +94,29 @@ class dIdV_line:
         self.fig_eslice.show()
         
     def plot_position_slice(self,pos,**args):
-        def gaussian_step(x,x0,Ag,As,s,y0):
-            step=np.zeros((len(self.energy)))
-            for i in range(len(self.energy)):
-                if self.energy[i]>x0:
-                    step[i]+=As
-            y=Ag*np.exp(-(x-x0)**2/2/s)+step+y0
-            return y
-        
-        if 'fit' in args:
-            fit=True
+        if 'find_onset' in args:
+            find_onset=True
+            onsets=[]
+            onset_range=args['find_onset']
+            for i in range(2):
+                onset_range[i]=np.argmin(abs(self.energy-onset_range[i]))
         else:
-            fit=False
+            find_onset=False
         
         self.fig_pslice,self.ax_pslice=plt.subplots(1,1,tight_layout=True)
-        if type(pos)==list:
-            for p in list(pos):
-                i=np.argmin(abs(self.pos-p))
-                self.ax_pslice.plot(self.energy,self.LIAcurrent[:,i],label=p)
-                self.ax_main.plot([p,p],[self.energy[0],self.energy[-1]])
-                if fit:
-                    p0=(self.energy[np.argmax(self.LIAcurrent[:,i])],max(self.LIAcurrent[:,i]),self.LIAcurrent[-1]-self.LIAcurrent[0],0.05,min(self.LIAcurrent[:,i]))
-                    bounds=([min(self.energy),0,0,0,0],[max(self.energy),np.inf,np.inf,np.inf,np.inf])
-                    popt,pcov=curve_fit(gaussian_step,self.energy,self.LIAcurrent[:,i],p0=p0,bounds=bounds)
+        if type(pos) != list:
+            pos=[pos]
+        for p in pos:
+            i=np.argmin(abs(self.pos-p))
+            self.ax_pslice.plot(self.energy,self.LIAcurrent[:,i],label='{} $\AA$'.format(p))
+            self.ax_main.plot([p,p],[self.energy[0],self.energy[-1]])
+            if find_onset:
+                onset_height=(np.max(self.LIAcurrent[onset_range[0]:onset_range[1],i])+np.min(self.LIAcurrent[onset_range[0]:onset_range[1],i]))/2
+                onsets.append(self.energy[np.argmin(abs(self.LIAcurrent[:,i]-onset_height))])
+                self.ax_pslice.plot([onsets[-1] for j in range(2)],[min(self.LIAcurrent[[onset_range[0],onset_range[1]],i]),max(self.LIAcurrent[[onset_range[0],onset_range[1]],i])],label='onset')
+                print(onset_height,onset_range)
+                if p==pos[-1]:
+                    print('average 2d band onset: {} +/- {} eV'.format(np.mean(onsets),np.std(onsets)))
         self.ax_pslice.set(xlabel='bias / eV')
         self.ax_pslice.set(ylabel='dI/dV / pA')
         self.ax_pslice.legend()
@@ -216,7 +216,7 @@ class dIdV_line:
         self.fig_fit.show()
         pcov=np.sqrt(np.diag(pcov))
         print('m* = {} +/- {}'.format(popt[0]**-2/m,pcov[0]/popt[0]**3/m))
-        print('R = {} +/- {} Angstroms'.format(popt[1]*-1e10,pcov[1]*1e10))
+        print('R = {} +/- {} Angstroms'.format(popt[1]*1e10,pcov[1]*1e10))
             
     def plot_fft(self,**args):
         fig,ax=plt.subplots(1,1)

@@ -74,11 +74,12 @@ class dIdV_line:
         self.fig_main.show()
         
     def plot_energy_slice(self,energy):
-        self.fig_eslice,self.ax_eslice=plt.subplots(1,1,tight_layout=True)
+        if not hasattr(self,'fig_slice'):
+            self.fig_eslice,self.ax_eslice=plt.subplots(1,1,tight_layout=True)
         if type(energy)==list:
             for e in energy:
                 i=np.argmin(abs(self.energy-e))
-                self.ax_eslice.plot(self.pos,self.LIAcurrent[i],label=e)
+                self.ax_eslice.plot(self.pos,self.LIAcurrent[i],label='{} eV'.format(e))
                 self.ax_main.plot([self.pos[0],self.pos[-1]],[e,e])
         else:
             i=np.argmin(abs(self.energy-energy))
@@ -114,8 +115,8 @@ class dIdV_line:
         self.centerline=self.ax_main.plot([pos,pos],[self.energy[0],self.energy[-1]],color='white',linestyle='dashed')
         
     def find_scattering_length(self,emin,emax,center,**args):
-        def gauss_fit(x,x1,x2,A,s,y0):
-            y=A*np.exp(-(x-x1)**2/s/2)+A*np.exp(-(x-x2)**2/s/2)+y0
+        def gauss_fit(x,x1,x2,A1,A2,s,y0):
+            y=A1*np.exp(-(x-x1)**2/s/2)+A2*np.exp(-(x-x2)**2/s/2)+y0
             return y
         
         def line_fit(x,a,b):
@@ -143,16 +144,30 @@ class dIdV_line:
         else:
             onset_energy=0.0
             
+        if 'plot_fits' in args:
+            plot_fits=args['plot_fits']
+            for i in range(len(plot_fits)):
+                plot_fits[i]=np.argmin(abs(self.energy-plot_fits[i]))
+            if not hasattr(self,'fig_eslice'):
+                self.plot_energy_slice([self.energy[j] for j in plot_fits])
+        else:
+            plot_fits=[]
+            
         energies=[]
         lengths=[]
         peak_pos=[]
         peak_energies=[]
         errors=[]
+        fits=np.zeros((len(self.energy),len(self.pos)))
         
         for i in range(emin,emax):
-            p0=[(self.pos[center]+self.pos[xmin])/2,(self.pos[xmax]+self.pos[center])/2,max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),0.5,min(self.LIAcurrent[i,xmin:xmax])]
-            bounds=([self.pos[xmin],self.pos[center],0,0,-np.inf],[self.pos[center],self.pos[xmax],np.inf,np.inf,np.inf])
+            p0=[(self.pos[center]+self.pos[xmin])/2,(self.pos[xmax]+self.pos[center])/2,max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),0.5,min(self.LIAcurrent[i,xmin:xmax])]
+            bounds=([self.pos[xmin],self.pos[center],0,0,0,-np.inf],[self.pos[center],self.pos[xmax],np.inf,np.inf,np.inf,np.inf])
             popt,pcov=curve_fit(gauss_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
+            fits[i,:]+=gauss_fit(self.pos,popt[0],popt[1],popt[2],popt[3],popt[4],popt[5])
+            
+            if i in plot_fits:
+                self.ax_eslice.plot(self.pos,fits[i],label='{} eV'.format(self.energy[i]))
                            
             lengths.append(abs(popt[0]-popt[1]))
             energies.append(self.energy[i])

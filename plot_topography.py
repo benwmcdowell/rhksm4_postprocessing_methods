@@ -1,6 +1,7 @@
 import rhksm4
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 
 class topography:
     def __init__(self,ifile,**args):
@@ -28,6 +29,16 @@ class topography:
         self.data-=np.min(self.data)
         self.x-=np.min(self.x)
         self.y-=np.min(self.y)
+        
+    def line_slope_subtract(self):
+        def linear_fit(x,a,b):
+            y=a*x+b
+            return y
+        
+        for i in range(self.npts):
+            popt,pcov=curve_fit(linear_fit,self.x,self.data[i,:])
+            yfit=linear_fit(self.data[i,:],popt[0],popt[1])
+            self.data[i,:]-=yfit
         
     def plot_topo(self,**args):
         if 'cmap' in args:

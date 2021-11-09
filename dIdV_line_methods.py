@@ -73,6 +73,9 @@ class dIdV_line:
         self.ax_main.set(ylabel='bias / V')
         self.fig_main.show()
         
+    def clear_energy_axes(self):
+        self.ax_eslice.clear()
+        
     def plot_energy_slice(self,energy):
         if not hasattr(self,'fig_slice'):
             self.fig_eslice,self.ax_eslice=plt.subplots(1,1,tight_layout=True)
@@ -90,17 +93,30 @@ class dIdV_line:
         self.ax_eslice.legend()
         self.fig_eslice.show()
         
-    def plot_position_slice(self,pos):
+    def plot_position_slice(self,pos,**args):
+        def gaussian_step(x,x0,Ag,As,s,y0):
+            step=np.zeros((len(self.energy)))
+            for i in range(len(self.energy)):
+                if self.energy[i]>x0:
+                    step[i]+=As
+            y=Ag*np.exp(-(x-x0)**2/2/s)+step+y0
+            return y
+        
+        if 'fit' in args:
+            fit=True
+        else:
+            fit=False
+        
         self.fig_pslice,self.ax_pslice=plt.subplots(1,1,tight_layout=True)
         if type(pos)==list:
-            for p in pos:
+            for p in list(pos):
                 i=np.argmin(abs(self.pos-p))
                 self.ax_pslice.plot(self.energy,self.LIAcurrent[:,i],label=p)
                 self.ax_main.plot([p,p],[self.energy[0],self.energy[-1]])
-        else:
-            i=np.argmin(abs(self.pos-pos))
-            self.ax_pslice.plot(self.energy,self.LIAcurrent[:,i],label=pos)
-            self.ax_main.plot([pos,pos],[self.energy[0],self.energy[-1]])
+                if fit:
+                    p0=(self.energy[np.argmax(self.LIAcurrent[:,i])],max(self.LIAcurrent[:,i]),self.LIAcurrent[-1]-self.LIAcurrent[0],0.05,min(self.LIAcurrent[:,i]))
+                    bounds=([min(self.energy),0,0,0,0],[max(self.energy),np.inf,np.inf,np.inf,np.inf])
+                    popt,pcov=curve_fit(gaussian_step,self.energy,self.LIAcurrent[:,i],p0=p0,bounds=bounds)
         self.ax_pslice.set(xlabel='bias / eV')
         self.ax_pslice.set(ylabel='dI/dV / pA')
         self.ax_pslice.legend()

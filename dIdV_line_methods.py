@@ -31,6 +31,7 @@ class dIdV_line:
         self.pos=abs(self.pos-max(self.pos)) #postion along line in $\AA$
         self.LIAcurrent=self.LIAcurrent[0,:,:].T[::-1]*1.0e12 #LIAcurrent in pA
         self.current=self.current[0,:,:].T[::-1]*1.0e12 #current in pA
+        self.LIAfit=np.zeros((self.npts,self.size))
         
     def normalize(self,**args):
         if 'range' in args:
@@ -58,6 +59,24 @@ class dIdV_line:
             params=curve_fit(model_cosine,self.pos,self.LIAcurrent[i])
             fit=model_cosine(self.pos,params[0][0],params[0][1],params[0][2])
             self.LIAcurrent[i]-=fit
+            
+    def plot_fit_residuals(self,**args):
+        if 'cmap' in args:
+            cmap=args['cmap']
+        else:
+            cmap='seismic'
+            
+        self.fig_res,self.ax_res=plt.subplots(1,1,tight_layout=True)
+        x=np.array([[self.pos[i] for i in range(self.size)] for j in range(self.npts)])
+        y=np.array([[self.energy[j] for i in range(self.size)] for j in range(self.npts)])
+        tempvar=np.zeros((self.npts,self.size))
+        for i in range(self.npts):
+            if max(self.LIAfit[i])>0.0:
+                tempvar[i]+=self.LIAfit[i]-self.LIAcurrent[i]
+        self.residualmap=self.ax_res.pcolormesh(x,y,tempvar,cmap=cmap,shading='nearest')
+        self.ax_res.set(xlabel='position / $\AA$')
+        self.ax_res.set(ylabel='bias / V')
+        self.fig_res.show()
         
     def plot_dIdV_line(self,**args):
         if 'cmap' in args:
@@ -114,7 +133,6 @@ class dIdV_line:
                 onset_height=(np.max(self.LIAcurrent[onset_range[0]:onset_range[1],i])+np.min(self.LIAcurrent[onset_range[0]:onset_range[1],i]))/2
                 onsets.append(self.energy[np.argmin(abs(self.LIAcurrent[:,i]-onset_height))])
                 self.ax_pslice.plot([onsets[-1] for j in range(2)],[min(self.LIAcurrent[[onset_range[0],onset_range[1]],i]),max(self.LIAcurrent[[onset_range[0],onset_range[1]],i])],label='onset')
-                print(onset_height,onset_range)
                 if p==pos[-1]:
                     print('average 2d band onset: {} +/- {} eV'.format(np.mean(onsets),np.std(onsets)))
         self.ax_pslice.set(xlabel='bias / eV')
@@ -171,39 +189,41 @@ class dIdV_line:
             
         energies=[]
         lengths=[]
+        errors=[]
         peak_pos=[]
         peak_energies=[]
-        errors=[]
-        fits=np.zeros((len(self.energy),len(self.pos)))
+        peak_errors=[]
         
         for i in range(emin,emax):
             p0=[(self.pos[center]+self.pos[xmin])/2,(self.pos[xmax]+self.pos[center])/2,max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),0.5,min(self.LIAcurrent[i,xmin:xmax])]
             bounds=([self.pos[xmin],self.pos[center],0,0,0,-np.inf],[self.pos[center],self.pos[xmax],np.inf,np.inf,np.inf,np.inf])
             popt,pcov=curve_fit(gauss_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
-            fits[i,:]+=gauss_fit(self.pos,popt[0],popt[1],popt[2],popt[3],popt[4],popt[5])
+            self.LIAfit[i,:]+=gauss_fit(self.pos,popt[0],popt[1],popt[2],popt[3],popt[4],popt[5])
             
             if i in plot_fits:
-                self.ax_eslice.plot(self.pos,fits[i],label='{} eV'.format(self.energy[i]))
+                self.ax_eslice.plot(self.pos,self.LIAfit[i],label='{} eV'.format(self.energy[i]))
                            
             lengths.append(abs(popt[0]-popt[1]))
             energies.append(self.energy[i])
             pcov=np.sqrt(np.diag(pcov))
+            errors.append(np.sqrt(pcov[0]**2+pcov[1]**2))
             for j in range(2):
                 peak_pos.append(popt[j])
                 peak_energies.append(self.energy[i])
-                errors.append(np.sqrt(pcov[0]**2+pcov[1]**2))
+                peak_errors.append(pcov[j])
             
         if overlay_peaks:
-            self.ax_main.errorbar(peak_pos,peak_energies,xerr=errors,fmt='o')
+            self.ax_main.errorbar(peak_pos,peak_energies,xerr=peak_errors,fmt='o')
             
         self.fig_fit,self.ax_fit=plt.subplots(1,1,tight_layout=True)
         energies=np.array(energies)
         lengths=np.array(lengths)
-        errors=np.array(lengths)
+        errors=np.array(errors)
         k=1.6022e-19 #J/eV
         energies-=onset_energy
         energies*=k
         lengths*=1e-10
+        errors*=1e-10
         h=6.626e-34 #J*s
         m=9.10938356e-31 #kg
         tempx=h/np.sqrt(energies)/np.sqrt(2)

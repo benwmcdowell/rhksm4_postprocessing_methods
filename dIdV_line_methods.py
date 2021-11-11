@@ -178,6 +178,13 @@ class dIdV_line:
         else:
             onset_energy=0.0
             
+        #scatter_side determines which side of the scattering source to model
+        #default is both; options are left, right, both
+        if 'scatter_side' in args:
+            scatter_side=args['scatter_side']
+        else:
+            scatter_side='both'
+            
         if 'plot_fits' in args:
             plot_fits=args['plot_fits']
             for i in range(len(plot_fits)):
@@ -194,7 +201,7 @@ class dIdV_line:
         peak_energies=[]
         peak_errors=[]
         
-        for i in range(emin,emax):
+        for i in range(emin,emax+1):
             p0=[(self.pos[center]+self.pos[xmin])/2,(self.pos[xmax]+self.pos[center])/2,max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),0.5,min(self.LIAcurrent[i,xmin:xmax])]
             bounds=([self.pos[xmin],self.pos[center],0,0,0,-np.inf],[self.pos[center],self.pos[xmax],np.inf,np.inf,np.inf,np.inf])
             popt,pcov=curve_fit(gauss_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
@@ -202,12 +209,23 @@ class dIdV_line:
             
             if i in plot_fits:
                 self.ax_eslice.plot(self.pos,self.LIAfit[i],label='{} eV'.format(self.energy[i]))
-                           
-            lengths.append(abs(popt[0]-popt[1]))
+                         
             energies.append(self.energy[i])
             pcov=np.sqrt(np.diag(pcov))
-            errors.append(np.sqrt(pcov[0]**2+pcov[1]**2))
-            for j in range(2):
+            if scatter_side=='both':
+                lengths.append(abs(popt[0]-popt[1]))
+                errors.append(np.sqrt(pcov[0]**2+pcov[1]**2))
+                temprange=range(2)
+            if scatter_side=='left':
+                lengths.append(self.pos[center]-popt[0])
+                errors.append(pcov[0])
+                temprange=range(1)
+            if scatter_side=='right':
+                lengths.append(popt[1]-self.pos[center])
+                errors.append(pcov[1])
+                temprange=range(1,2)
+
+            for j in temprange:
                 peak_pos.append(popt[j])
                 peak_energies.append(self.energy[i])
                 peak_errors.append(pcov[j])
@@ -223,6 +241,8 @@ class dIdV_line:
         energies-=onset_energy
         energies*=k
         lengths*=1e-10
+        if scatter_side!='both':
+            lengths*=2.0
         errors*=1e-10
         h=6.626e-34 #J*s
         m=9.10938356e-31 #kg

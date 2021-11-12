@@ -157,6 +157,11 @@ class dIdV_line:
             y=a*x+b
             return y
         
+        def edependent_line_fit(x,a,b,c):
+            tempx=h/np.sqrt(x-c)/np.sqrt(2)
+            y=a*tempx+b
+            return y
+        
         center=np.argmin(abs(self.pos-center))
         emin=np.argmin(abs(self.energy-emin))
         emax=np.argmin(abs(self.energy-emax))
@@ -167,6 +172,11 @@ class dIdV_line:
         else:
             xmin=0
             xmax=len(self.pos)-1
+            
+        if 'linear_fit' in args:
+            linear_fit='e_dependent'
+        else:
+            linear_fit='e_independent'
         
         if 'overlay_peaks' in args:
             overlay_peaks=args['overlay_peaks']
@@ -248,8 +258,12 @@ class dIdV_line:
         m=9.10938356e-31 #kg
         tempx=h/np.sqrt(energies)/np.sqrt(2)
         self.ax_fit.scatter(tempx,lengths,label='raw data')
-        popt,pcov=curve_fit(line_fit,tempx,lengths,p0=[3/np.sqrt(m),0.0],sigma=errors)
-        self.ax_fit.plot(tempx,line_fit(tempx,popt[0],popt[1]),label='fit')
+        if linear_fit=='e_independent':
+            popt,pcov=curve_fit(line_fit,tempx,lengths,p0=[3/np.sqrt(m),0.0],sigma=errors)
+            self.ax_fit.plot(tempx,line_fit(tempx,popt[0],popt[1]),label='fit')
+        else:
+            popt,pcov=curve_fit(edependent_line_fit,energies,lengths,p0=[3/np.sqrt(m),0.0,0.0],sigma=errors)
+            self.ax_fit.plot(tempx,edependent_line_fit(energies,popt[0],popt[1],popt[2]),label='fit')
         self.ax_fit.legend()
         self.ax_fit.set(xlabel='$2^{-1/2}$h$E^{-1/2}$ / m $kg^{1/2}$')
         self.ax_fit.set(ylabel='d / m')

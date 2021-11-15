@@ -158,8 +158,8 @@ class dIdV_line:
             return y
         
         def edependent_line_fit(x,a,b,c):
-            tempx=h/np.sqrt(x-c)/np.sqrt(2)
-            y=a*tempx+b
+            h=6.626e-34 #J*s
+            y=a*h/np.sqrt(x-c)/np.sqrt(2)+b
             return y
         
         center=np.argmin(abs(self.pos-center))
@@ -174,9 +174,9 @@ class dIdV_line:
             xmax=len(self.pos)-1
             
         if 'linear_fit' in args:
-            linear_fit='e_dependent'
-        else:
             linear_fit='e_independent'
+        else:
+            linear_fit='e_dependent'
         
         if 'overlay_peaks' in args:
             overlay_peaks=args['overlay_peaks']
@@ -185,6 +185,8 @@ class dIdV_line:
             
         if 'onset' in args:
             onset_energy=args['onset']
+            if linear_fit=='e_dependent':
+                print('warning: onset energy is selected as an optimizable parameter and specified as an input value. remove onset from the input arguments or set linear_fit=e_independent')
         else:
             onset_energy=0.0
             
@@ -256,14 +258,14 @@ class dIdV_line:
         errors*=1e-10
         h=6.626e-34 #J*s
         m=9.10938356e-31 #kg
-        tempx=h/np.sqrt(energies)/np.sqrt(2)
-        self.ax_fit.scatter(tempx,lengths,label='raw data')
         if linear_fit=='e_independent':
+            tempx=h/np.sqrt(energies)/np.sqrt(2)
             popt,pcov=curve_fit(line_fit,tempx,lengths,p0=[3/np.sqrt(m),0.0],sigma=errors)
-            self.ax_fit.plot(tempx,line_fit(tempx,popt[0],popt[1]),label='fit')
         else:
-            popt,pcov=curve_fit(edependent_line_fit,energies,lengths,p0=[3/np.sqrt(m),0.0,0.0],sigma=errors)
-            self.ax_fit.plot(tempx,edependent_line_fit(energies,popt[0],popt[1],popt[2]),label='fit')
+            popt,pcov=curve_fit(edependent_line_fit,energies,lengths,p0=[1/np.sqrt(m),5*1e-10,0.1*k],sigma=errors)
+            tempx=h/np.sqrt(energies-popt[2])/np.sqrt(2)
+        self.ax_fit.scatter(tempx,lengths,label='raw data')
+        self.ax_fit.plot(tempx,line_fit(tempx,popt[0],popt[1]),label='fit')
         self.ax_fit.legend()
         self.ax_fit.set(xlabel='$2^{-1/2}$h$E^{-1/2}$ / m $kg^{1/2}$')
         self.ax_fit.set(ylabel='d / m')
@@ -271,6 +273,8 @@ class dIdV_line:
         pcov=np.sqrt(np.diag(pcov))
         print('m* = {} +/- {}'.format(popt[0]**-2/m,pcov[0]/popt[0]**3/m))
         print('R = {} +/- {} Angstroms'.format(popt[1]*1e10,pcov[1]*1e10))
+        if len(popt)>2:
+            print('band onset = {} +/- {} eV'.format(popt[2]/k,pcov[2]/k))
             
     def plot_fft(self,**args):
         fig,ax=plt.subplots(1,1)

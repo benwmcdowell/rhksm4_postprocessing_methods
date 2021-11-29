@@ -30,14 +30,37 @@ class topography:
         self.x-=np.min(self.x)
         self.y-=np.min(self.y)
         
-    def line_slope_subtract(self):
+    def line_slope_subtract(self,*args):
         def linear_fit(x,a,b):
             y=a*x+b
             return y
         
+        if 'range_select' in args:
+            fit_range=np.array(args['range_select'])
+            for i in range(2):
+                for j in range(2):
+                    fit_range[i,j]=np.argmin(abs(fit_range[i,j]-self.x))
+        else:
+            fit_range=np.array([[0,self.npts],[0,self.npts]])
+            
+        fit_exclude=[[],[]]
+        if 'range_exclude' in args:
+            for i in range(2):
+                temprange=[np.argmin(abs(fit_exclude[i][j]-self.y)) for j in range(2)]
+                for j in range(temprange[0],temprange[1]+1):
+                    fit_exclude[i].append(j)
+        
         for i in range(self.npts):
-            popt,pcov=curve_fit(linear_fit,self.x,self.data[i,:])
-            yfit=linear_fit(self.data[i,:],popt[0],popt[1])
+            tempdata=[]
+            tempx=[]
+            for j in range(self.npts):
+                if i in fit_exclude[0] and j in fit_exclude[1]:
+                    pass
+                else:
+                    tempdata.append(self.data[i,j])
+                    tempx.append(self.x[j])
+            popt,pcov=curve_fit(linear_fit,tempx,tempdata)
+            yfit=linear_fit(self.x,popt[0],popt[1])
             self.data[i,:]-=yfit
         
     def plot_topo(self,**args):

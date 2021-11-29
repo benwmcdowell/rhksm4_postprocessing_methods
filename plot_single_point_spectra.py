@@ -68,7 +68,6 @@ def plot_single_point(ifiles,**args):
             fit_range=[np.min(xdata),np.max(xdata)]
         for j in range(2):
             fit_range[j]=np.argmin(abs(fit_range[j]-xdata[-1]))
-        print(fit_range)
             
     fit_params=[]
     fit_error=[]

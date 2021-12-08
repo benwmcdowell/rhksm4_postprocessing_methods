@@ -104,7 +104,7 @@ class dIdV_line:
             self.ax_eslice.plot(self.pos,self.LIAcurrent[i])
             self.ax_main.plot([self.pos[0],self.pos[-1]],[energy,energy])
         self.ax_eslice.set(xlabel='position / $\AA$')
-        self.ax_eslice.set(ylabel='dI/dV / pA')
+        self.ax_eslice.set(ylabel='LIA current / pA')
         self.ax_eslice.legend()
         self.fig_eslice.show()
         
@@ -132,7 +132,7 @@ class dIdV_line:
                 if p==pos[-1]:
                     print('average 2d band onset: {} +/- {} eV'.format(np.mean(onsets),np.std(onsets)))
         self.ax_pslice.set(xlabel='bias / eV')
-        self.ax_pslice.set(ylabel='dI/dV / pA')
+        self.ax_pslice.set(ylabel='LIA current / pA')
         self.ax_pslice.legend()
         self.fig_pslice.show()
         

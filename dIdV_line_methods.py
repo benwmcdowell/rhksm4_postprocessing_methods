@@ -36,12 +36,8 @@ class dIdV_line:
     def normalize(self,**args):
         if 'range' in args:
             norm_range=[]
-            for i in range(self.npts):
-                if self.energies[i]>args['range'][0] and len(norm_range):
-                    norm_range.append(i)
-                if self.energies[i]>args['range'][1]:
-                    norm_range.append(i)
-                    break
+            for i in args['norm_range']:
+                norm_range.append(np.argmin(abs(i-self.energy)))
         else:
             norm_range=[0,self.npts]
         

@@ -11,11 +11,16 @@ def get_single_point(ifile,**args):
         average=args['average_scans']
     else:
         average=[i for i in range(scan_num)]
+        
+    if 'total_current' in args:
+        page_num=1
+    else:
+        page_num=0
     
     ydata=np.zeros(np.shape(f[0].data)[1])
     xdata=np.zeros(np.shape(f[0].data)[1])
     for i in average:
-        ydata+=f[0].data[i]*f[0].attrs['RHK_Zscale']+f[0].attrs['RHK_Zoffset'] #LIA current in pA
+        ydata+=f[page_num].data[i]*f[page_num].attrs['RHK_Zscale']+f[page_num].attrs['RHK_Zoffset'] #LIA current in pA
     ydata/=scan_num
     xdata+=[f[0].attrs['RHK_Xoffset']+i*f[0].attrs['RHK_Xscale'] for i in range(len(ydata))] #bias in V
     setpoint=f[0].attrs['RHK_Current']/1e-12 #current setpoint in pA
@@ -27,7 +32,7 @@ def get_single_point(ifile,**args):
     xdata=xdata[::-1]
     ydata=ydata[::-1]
     
-    return xdata,ydata,setpoint
+    return xdata,ydata,setpoint,scan_num
 
 def plot_single_point(ifiles,**args):
     if 'normalize' in args:
@@ -100,6 +105,31 @@ def plot_single_point(ifiles,**args):
     if 'labels' in args:
         plt.legend()
     plt.show()
+    
+def plot_fr_avg(ifile):
+    scan_num=get_single_point(ifile)[-1]
+    fnum=[]
+    rnum=[]
+    for i in range(scan_num):
+        if (i+1)%2==0:
+            rnum.append(i)
+        else:
+            fnum.append(i)
+    xf,yf=get_single_point(ifile,average_scans=fnum)[:2]
+    xr,yr=get_single_point(ifile,average_scans=rnum)[:2]
+    xf_tot,yf_tot=get_single_point(ifile,average_scans=fnum,total_current=True)[:2]
+    xr_tot,yr_tot=get_single_point(ifile,average_scans=rnum,total_current=True)[:2]
+    
+    fig,ax=plt.subplots(2,1,sharex=True)
+    ax[1].plot(xf,yf,label='forward',color='red')
+    ax[1].plot(xr,yr,label='reverse',color='blue')
+    ax[0].plot(xf_tot,yf_tot,color='red')
+    ax[0].plot(xr_tot,yr_tot,color='blue')
+    ax[0].set(xlabel='bias / V')
+    ax[1].set(ylabel='LIA current / pA')
+    ax[0].set(ylabel='current / pA')
+    fig.legend()
+    fig.show()
     
 def fano_fit(x,q,E,G):
     ered=2*(x-E)/G

@@ -13,7 +13,10 @@ def get_single_point(ifile,**args):
         average=[i for i in range(scan_num)]
         
     if 'total_current' in args:
-        page_num=1
+        if args['total_current']!=True:
+            page_num=0
+        else:
+            page_num=1
     else:
         page_num=0
     
@@ -21,7 +24,7 @@ def get_single_point(ifile,**args):
     xdata=np.zeros(np.shape(f[0].data)[1])
     for i in average:
         ydata+=f[page_num].data[i]*f[page_num].attrs['RHK_Zscale']+f[page_num].attrs['RHK_Zoffset'] #LIA current in pA
-    ydata/=scan_num
+    ydata/=len(average)
     xdata+=[f[0].attrs['RHK_Xoffset']+i*f[0].attrs['RHK_Xscale'] for i in range(len(ydata))] #bias in V
     setpoint=f[0].attrs['RHK_Current']/1e-12 #current setpoint in pA
     
@@ -37,7 +40,8 @@ def get_single_point(ifile,**args):
 def plot_single_point(ifiles,**args):
     if 'normalize' in args:
         normalize=True
-        #normalizes relative to max dI/dV point
+        #normalizes relative to voltage range specified in normalize argument
+        norm_range=args['normalize']
     else:
         normalize=False
         
@@ -56,17 +60,25 @@ def plot_single_point(ifiles,**args):
     else:
         labels=[None for i in range(len(ifiles))]
         
+    if 'total_current' in args:
+        total_current=True
+    else:
+        total_current=False
+        
     ydata=[]
     xdata=[]
     setpoints=[]
     num=len(ifiles)
     for i in ifiles:
-        tempvar=get_single_point(i)
+        tempvar=get_single_point(i,total_current=total_current)
         xdata.append(tempvar[0])
         ydata.append(tempvar[1])
         setpoints.append(tempvar[2])
         if normalize:
-            ydata[-1]/=max(ydata[-1])
+            temp_range=[]
+            for i in [min(norm_range),max(norm_range)]:
+                temp_range.append(np.argmin(abs(i-xdata[-1])))
+            ydata[-1]/=sum(ydata[-1][min(temp_range):max(temp_range)])
         if 'fit_range' in args:
             fit_range=args['fit_range']
         else:
@@ -89,7 +101,7 @@ def plot_single_point(ifiles,**args):
             
     plt.figure()
     for i in range(num):
-        plt.scatter(xdata[i],ydata[i],label=labels[i])
+        plt.plot(xdata[i],ydata[i],label=labels[i])
         if fit_lineshape=='fano':
             plt.plot(xdata[i],fano_fit(xdata[i],fit_params[i][0],fit_params[i][1],fit_params[i][2]))
         if find_peak:

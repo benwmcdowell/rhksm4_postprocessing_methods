@@ -3,6 +3,7 @@ import rhksm4
 from scipy.optimize import curve_fit
 import numpy as np
 from scipy.signal import find_peaks
+from scipy.signal import savgol_filter
 
 def get_single_point(ifile,**args):
     f=rhksm4.load(ifile)
@@ -74,6 +75,9 @@ def plot_single_point(ifiles,**args):
         xdata.append(tempvar[0])
         ydata.append(tempvar[1])
         setpoints.append(tempvar[2])
+        if 'savgol_filter' in args:
+            w,o=args['savgol_filter']
+            ydata[-1]=savgol_filter(ydata[-1],w,o)
         if normalize:
             temp_range=[]
             for i in [min(norm_range),max(norm_range)]:

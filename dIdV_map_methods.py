@@ -54,7 +54,7 @@ class dIdV_map():
             with open(Path(str(self.epoints[i])),'w+') as output:
                 for j in range(self.npts[0]):
                     for k in range(self.npts[1]):
-                        output.write(np.format_float_scientific(self.z[i,j,k],exp_digits=3,precision=5))
+                        output.write(np.format_float_scientific(self.z[i,self.npts[0]-1-j,k],exp_digits=3,precision=5))
                         if j<self.npts[1]-1:
                             output.write('\t')
                     output.write('\n')

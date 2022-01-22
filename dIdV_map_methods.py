@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from pathlib import Path
+from scipy.signal import savgol_filter
 
 class dIdV_map():
     def __init__(self,ifile,**args):
@@ -33,6 +34,13 @@ class dIdV_map():
             for j in range(np.shape(self.f[4].data)[1]):
                 self.z[j,i//self.npts[0],i%self.npts[0]]=self.f[4].data[i,j]*self.f[4].attrs['RHK_Zscale']+self.f[4].attrs['RHK_Zoffset']
                 
+    def add_savgol_filter(self,w,o,**args):
+        for i in range(len(self.epoints)):
+            for j in range(self.npts[0]):
+                self.z[i,j,:]=savgol_filter(self.z[i,j,:],w,o)
+            for j in range(self.npts[1]):
+                self.z[i,:,j]=savgol_filter(self.z[i,:,j],w,o)
+                
     def plot_maps(self,**args):
         if 'cmap' in args:
             cmap=args['cmap']
@@ -54,7 +62,7 @@ class dIdV_map():
             with open(Path(str(self.epoints[i])),'w+') as output:
                 for j in range(self.npts[0]):
                     for k in range(self.npts[1]):
-                        output.write(np.format_float_scientific(self.z[i,self.npts[0]-1-j,k],exp_digits=3,precision=5))
-                        if j<self.npts[1]-1:
+                        output.write(np.format_float_scientific(self.z[i,j,k],exp_digits=3,precision=5))
+                        if k<self.npts[1]-1:
                             output.write('\t')
                     output.write('\n')

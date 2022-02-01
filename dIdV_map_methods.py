@@ -4,6 +4,7 @@ import numpy as np
 import os
 from pathlib import Path
 from scipy.signal import savgol_filter
+from scipy.optimize import curve_fit
 
 class dIdV_map():
     def __init__(self,ifile,**args):
@@ -27,6 +28,8 @@ class dIdV_map():
             
         self.x=np.array([self.f[3].attrs['RHK_Xoffset']+i*self.f[3].attrs['RHK_Xscale'] for i in range(self.npts[0])])*1.0e9/self.sf[0]
         self.y=np.array([self.f[3].attrs['RHK_Yoffset']+i*self.f[3].attrs['RHK_Yscale'] for i in range(self.npts[1])])*1.0e9/self.sf[1]
+        self.x-=np.min(self.x)
+        self.y-=np.min(self.y)
         
         self.epoints=np.array([self.f[4].attrs['RHK_Xoffset']+self.f[4].attrs['RHK_Xscale']*i for i in range(np.shape(self.f[4].data)[1])])
         self.z=np.zeros((len(self.epoints),self.npts[0],self.npts[1]))
@@ -40,6 +43,16 @@ class dIdV_map():
                 self.z[i,j,:]=savgol_filter(self.z[i,j,:],w,o)
             for j in range(self.npts[1]):
                 self.z[i,:,j]=savgol_filter(self.z[i,:,j],w,o)
+                
+    def flatten_map(self):
+        def linear_fit(x,a,b):
+            y=a*x+b
+            return y
+        for i in range((len(self.epoints))):
+            for j in range(self.npts[0]):
+                popt,pcov=curve_fit(linear_fit,self.x,self.z[i,j,:])
+                yfit=linear_fit(self.x,popt[0],popt[1])
+                self.z[i,j,:]-=yfit
                 
     def plot_maps(self,**args):
         if 'cmap' in args:

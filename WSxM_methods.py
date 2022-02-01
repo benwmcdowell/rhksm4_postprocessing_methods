@@ -47,3 +47,7 @@ class profile():
         popt,pcov=curve_fit(gauss,self.x[xrange[0]:xrange[1]],self.y[xrange[0]:xrange[1]],p0=[max(self.y[xrange[0]:xrange[1]]),np.average(self.x[xrange[0]:xrange[1]]),0.05,0],bounds=([0,np.min(self.x[xrange[0]:xrange[1]]),0,0],[np.max(self.y[xrange[0]:xrange[1]])*1.5,np.max(self.x[xrange[0]:xrange[1]]),self.x[-1]-self.x[0],np.max(self.y[xrange[0]:xrange[1]])]))
         pcov=np.sqrt(np.diag(pcov))
         print('peak is centered at {} +/- {}'.format(popt[1],pcov[1]))
+        
+    def find_peak(self):
+        peak_center=self.x[np.argmax(self.y)]
+        print('peak is centered at {}'.format(peak_center))

@@ -19,6 +19,14 @@ class dIdV_map():
         else:
             self.scan_direction='forward'
             
+        if 'normalize' in args:
+            if args['normalize']==False:
+                normalize=True
+            else:
+                normalize=True
+        else:
+            normalize=True
+            
         self.f=rhksm4.load(ifile)
         self.npts=np.shape(self.f[1].data)
         if self.scan_direction=='forward':
@@ -28,6 +36,7 @@ class dIdV_map():
             
         self.x=np.array([self.f[3].attrs['RHK_Xoffset']+i*self.f[3].attrs['RHK_Xscale'] for i in range(self.npts[0])])*1.0e9/self.sf[0]
         self.y=np.array([self.f[3].attrs['RHK_Yoffset']+i*self.f[3].attrs['RHK_Yscale'] for i in range(self.npts[1])])*1.0e9/self.sf[1]
+        
         self.x-=np.min(self.x)
         self.y-=np.min(self.y)
         
@@ -36,6 +45,11 @@ class dIdV_map():
         for i in range(np.shape(self.f[4].data)[0]):
             for j in range(np.shape(self.f[4].data)[1]):
                 self.z[j,i//self.npts[0],i%self.npts[0]]=self.f[4].data[i,j]*self.f[4].attrs['RHK_Zscale']+self.f[4].attrs['RHK_Zoffset']
+
+        if normalize:
+            for i in range(len(self.epoints)):
+                self.z[i,:,:]-=np.min(self.z[i,:,:])
+                self.z[i,:,:]/=np.max(self.z[i,:,:])
                 
     def add_savgol_filter(self,w,o,**args):
         for i in range(len(self.epoints)):
@@ -53,6 +67,30 @@ class dIdV_map():
                 popt,pcov=curve_fit(linear_fit,self.x,self.z[i,j,:])
                 yfit=linear_fit(self.x,popt[0],popt[1])
                 self.z[i,j,:]-=yfit
+                
+    def plot_slice(self,pos,**args):
+        if 'orientation' in args:
+            if args['orientation']=='vertical':
+                horizontal=False
+            else:
+                horizontal=True
+        else:
+            horizontal=True
+            
+        if horizontal:
+            pos=np.argmin(abs(self.y-pos))
+        else:
+            pos=np.argmin(abs(self.x-pos))
+            
+        self.slice_fig,self.slice_ax=plt.subplots(1,1)
+        for i in range(len(self.epoints)):
+            if horizontal:
+                plt.plot(self.x,self.z[i,pos,:],label='{} V'.format(self.epoints[i]))
+            else:
+                plt.plot(self.y,self.z[i,:,pos],label='{} V'.format(self.epoints[i]))
+        self.slice_ax.set(xlabel='position / nm',ylabel='normalized LIA current')
+        self.slice_ax.legend()
+        self.slice_fig.show()
                 
     def plot_maps(self,**args):
         if 'cmap' in args:

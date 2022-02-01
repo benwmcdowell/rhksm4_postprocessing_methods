@@ -91,6 +91,15 @@ class dIdV_map():
         self.slice_ax.set(xlabel='position / nm',ylabel='normalized LIA current')
         self.slice_ax.legend()
         self.slice_fig.show()
+        
+    def plot_fft(self,**args):
+        if 'orientation' in args:
+            if args['orientation']=='vertical':
+                horizontal=False
+            else:
+                horizontal=True
+        else:
+            horizontal=True
                 
     def plot_maps(self,**args):
         if 'cmap' in args:

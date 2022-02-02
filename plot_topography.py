@@ -17,7 +17,6 @@ class topography:
             self.scan_direction='forward'
             
         self.f=rhksm4.load(ifile)
-        self.npts=np.shape(self.f)
         if self.scan_direction=='forward':
             self.data=(self.f[2].data*self.f[2].attrs['RHK_Zscale']+self.f[2].attrs['RHK_Zoffset'])*1.0e9/self.sf[2]
         else:
@@ -29,6 +28,7 @@ class topography:
         self.data-=np.min(self.data)
         self.x-=np.min(self.x)
         self.y-=np.min(self.y)
+        self.npts=np.shape(self.data)
         
     def line_slope_subtract(self,*args):
         def linear_fit(x,a,b):
@@ -50,10 +50,10 @@ class topography:
                 for j in range(temprange[0],temprange[1]+1):
                     fit_exclude[i].append(j)
         
-        for i in range(self.npts):
+        for i in range(self.npts[0]):
             tempdata=[]
             tempx=[]
-            for j in range(self.npts):
+            for j in range(self.npts[1]):
                 if i in fit_exclude[0] and j in fit_exclude[1]:
                     pass
                 else:
@@ -73,4 +73,46 @@ class topography:
         self.ax_main.pcolormesh([self.x for i in range(len(self.y))],[[self.y[j] for i in range(len(self.x))] for j in range(len(self.y))],self.data,cmap=cmap,shading='nearest')
         self.ax_main.set(xlabel='position / nm')
         self.ax_main.set(ylabel='position / nm')
+        self.ax_main.set_aspect('equal')
         self.fig_main.show()
+        
+    def plot_2dfft(self,**args):
+        if 'cmap' in args:
+            cmap=args['cmap']
+        else:
+            cmap=plt.rcParams['image.cmap']
+            
+        if 'normalize' in args:
+            if args['normalize']==False:
+                normalize=False
+            else:
+                normalize=True
+        else:
+            normalize=True
+            
+        scaling='linear'
+        if 'scaling' in args:
+            if args['scaling']=='log':
+                scaling='log'
+            if args['scaling']=='sqrt':
+                scaling='sqrt'
+            
+        self.fdata=np.fft.fftshift(abs(np.fft.fft2(self.data)))
+        self.fx=np.fft.fftshift(np.fft.fftfreq(self.npts[1],abs(self.x[-1]-self.x[0])/(self.npts[1]-1)))
+        self.fy=np.fft.fftshift(np.fft.fftfreq(self.npts[0],abs(self.y[-1]-self.y[0])/(self.npts[0]-1)))
+        
+        if scaling=='log':
+            self.fdata=np.log(self.fdata)
+        if scaling=='sqrt':
+            self.fdata=np.sqrt(self.fdata)
+        
+        if normalize:
+            self.fdata-=np.min(self.fdata)
+            self.fdata/=np.max(self.fdata)
+            
+        self.fig_fft,self.ax_fft=plt.subplots(1,1,tight_layout=True)
+        self.ax_fft.pcolormesh([self.fx for i in range(len(self.fy))],[[self.fy[j] for i in range(len(self.fx))] for j in range(len(self.fy))],self.fdata,cmap=cmap,shading='nearest')
+        self.ax_fft.set(xlabel='position / 2$\pi$ $nm^{-1}$')
+        self.ax_fft.set(ylabel='position / 2$\pi$ $nm^{-1}$')
+        self.ax_fft.set_aspect('equal')
+        self.fig_fft.show()

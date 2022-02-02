@@ -77,6 +77,11 @@ class dIdV_map():
         else:
             horizontal=True
             
+        if 'to_plot' in args:
+            epoints_to_plot=args['to_plot']
+        else:
+            epoints_to_plot=[i for i in range(len(self.epoints))]
+            
         if horizontal:
             pos=np.argmin(abs(self.y-pos))
         else:
@@ -84,23 +89,15 @@ class dIdV_map():
             
         self.slice_fig,self.slice_ax=plt.subplots(1,1)
         for i in range(len(self.epoints)):
-            if horizontal:
-                plt.plot(self.x,self.z[i,pos,:],label='{} V'.format(self.epoints[i]))
-            else:
-                plt.plot(self.y,self.z[i,:,pos],label='{} V'.format(self.epoints[i]))
+            if i in epoints_to_plot:
+                if horizontal:
+                    plt.plot(self.x,self.z[i,pos,:],label='{} V'.format(self.epoints[i]))
+                else:
+                    plt.plot(self.y,self.z[i,:,pos],label='{} V'.format(self.epoints[i]))
         self.slice_ax.set(xlabel='position / nm',ylabel='normalized LIA current')
         self.slice_ax.legend()
         self.slice_fig.show()
         
-    def plot_fft(self,**args):
-        if 'orientation' in args:
-            if args['orientation']=='vertical':
-                horizontal=False
-            else:
-                horizontal=True
-        else:
-            horizontal=True
-                
     def plot_maps(self,**args):
         if 'cmap' in args:
             cmap=args['cmap']

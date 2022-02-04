@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.signal import savgol_filter,find_peaks
+from scipy.interpolate import griddata
 
 class topography:
     def __init__(self,ifile,**args):
@@ -82,6 +83,14 @@ class topography:
         self.ax_main.set(ylabel='position / nm')
         self.ax_main.set_aspect('equal')
         self.fig_main.show()
+        
+    def drift_correct(self,v):
+        coord=np.array([[self.x[j],self.y[i]] for j in range(self.npts[1]) for i in range(self.npts[0])])
+        raw_data=np.array([self.data for j in range(self.npts[1]) for i in range(self.npts[0])])
+        
+        drift_coord=np.array([[self.x[j]+v[0]*(j+self.npts[1]*i),self.y[i]+v[1]*(j+self.npts[1]*i)] for j in range(self.npts[1]) for i in range(self.npts[0])])
+        
+        
         
     def take_2dfft(self,**args):
         scaling='linear'

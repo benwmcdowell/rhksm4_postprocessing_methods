@@ -2,6 +2,7 @@ import rhksm4
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+from scipy.signal import savgol_filter
 
 class topography:
     def __init__(self,ifile,**args):
@@ -29,6 +30,12 @@ class topography:
         self.x-=np.min(self.x)
         self.y-=np.min(self.y)
         self.npts=np.shape(self.data)
+        
+    def add_savgol_filter(self,w,o,**args):
+        for i in range(self.npts[0]):
+            self.data[i,:]=savgol_filter(self.data[i,:],w,o)
+        for i in range(self.npts[1]):
+            self.data[:,i]=savgol_filter(self.data[:,i],w,o)
         
     def line_slope_subtract(self,*args):
         def linear_fit(x,a,b):
@@ -76,6 +83,29 @@ class topography:
         self.ax_main.set_aspect('equal')
         self.fig_main.show()
         
+    def take_2dfft(self,**args):
+        scaling='linear'
+        if 'scaling' in args:
+            if args['scaling']=='log':
+                scaling='log'
+            if args['scaling']=='sqrt':
+                scaling='sqrt'
+            
+        self.fdata=np.fft.fftshift(abs(np.fft.fft2(self.data)))
+        self.fx=np.fft.fftshift(np.fft.fftfreq(self.npts[1],abs(self.x[-1]-self.x[0])/(self.npts[1]-1)))*np.pi*2
+        self.fy=np.fft.fftshift(np.fft.fftfreq(self.npts[0],abs(self.y[-1]-self.y[0])/(self.npts[0]-1)))*np.pi*2
+        
+        if scaling=='log':
+            self.fdata=np.log(self.fdata)
+        if scaling=='sqrt':
+            self.fdata=np.sqrt(self.fdata)
+            
+    def find_2dfft_peaks(self,**args):
+        if 'exclude' in args:
+            exclude=args['exclude']
+        else:
+            exclude=0
+            
     def plot_2dfft(self,**args):
         if 'cmap' in args:
             cmap=args['cmap']
@@ -90,22 +120,6 @@ class topography:
         else:
             normalize=True
             
-        scaling='linear'
-        if 'scaling' in args:
-            if args['scaling']=='log':
-                scaling='log'
-            if args['scaling']=='sqrt':
-                scaling='sqrt'
-            
-        self.fdata=np.fft.fftshift(abs(np.fft.fft2(self.data)))
-        self.fx=np.fft.fftshift(np.fft.fftfreq(self.npts[1],abs(self.x[-1]-self.x[0])/(self.npts[1]-1)))
-        self.fy=np.fft.fftshift(np.fft.fftfreq(self.npts[0],abs(self.y[-1]-self.y[0])/(self.npts[0]-1)))
-        
-        if scaling=='log':
-            self.fdata=np.log(self.fdata)
-        if scaling=='sqrt':
-            self.fdata=np.sqrt(self.fdata)
-        
         if normalize:
             self.fdata-=np.min(self.fdata)
             self.fdata/=np.max(self.fdata)

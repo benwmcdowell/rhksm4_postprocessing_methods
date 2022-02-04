@@ -2,7 +2,7 @@ import rhksm4
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
-from scipy.signal import savgol_filter
+from scipy.signal import savgol_filter,find_peaks
 
 class topography:
     def __init__(self,ifile,**args):
@@ -100,11 +100,35 @@ class topography:
         if scaling=='sqrt':
             self.fdata=np.sqrt(self.fdata)
             
-    def find_2dfft_peaks(self,**args):
-        if 'exclude' in args:
-            exclude=args['exclude']
-        else:
-            exclude=0
+    #default of filter_type is circle: argument is the radius of the circle to exclude
+    #if filter_type=rectangle: argument should be a tuple containing the width and height of the filter
+    def filter_2dfft(self,dim,filter_shape='circle',filter_type='pass'):
+        if filter_type=='pass':
+            filter_scale=1.0
+        elif filter_type=='cut':
+            filter_scale=0.0
+            
+        for i in range(self.npts[0]):
+            for j in range(self.npts[1]):
+                if filter_shape=='circle':
+                    if np.linalg.norm(np.array([self.fx[j],self.fy[i]]))<dim:
+                        self.fdata[i,j]*=filter_scale
+                if filter_shape=='square':
+                    if abs(self.fy[i])<dim[1] and abs(self.fx[i])<dim[0]:
+                        self.fdata[i,j]*=filter_scale
+            
+    def find_2dfft_peaks(self,height,distance):
+        self.peak_list=[]
+        for i in range(self.npts[1]):
+            for j in range(self.npts[0]):
+                if i in find_peaks(self.fdata[:,j],height=height,distance=distance)[0] and j in find_peaks(self.fdata[i,:],height=height,distance=distance)[0]:
+                    self.peak_list.append(np.array([self.fx[j],self.fy[i]]))
+                    
+        self.peak_list=np.array(self.peak_list)
+        print('peaks found at:')
+        for i in self.peak_list:
+            print(i)
+        
             
     def plot_2dfft(self,**args):
         if 'cmap' in args:

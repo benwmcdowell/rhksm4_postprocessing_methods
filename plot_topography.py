@@ -86,11 +86,17 @@ class topography:
         
     def drift_correct(self,v):
         coord=np.array([[self.x[j],self.y[i]] for j in range(self.npts[1]) for i in range(self.npts[0])])
-        raw_data=np.array([self.data for j in range(self.npts[1]) for i in range(self.npts[0])])
+        raw_data=np.array([self.data[i,j] for j in range(self.npts[1]) for i in range(self.npts[0])])
         
         drift_coord=np.array([[self.x[j]+v[0]*(j+self.npts[1]*i),self.y[i]+v[1]*(j+self.npts[1]*i)] for j in range(self.npts[1]) for i in range(self.npts[0])])
         
+        print(np.shape(coord))
+        print(np.shape(raw_data))
+        print(np.shape(drift_coord))
         
+        output=griddata(drift_coord,raw_data,coord)
+        
+        return output
         
     def take_2dfft(self,**args):
         scaling='linear'
@@ -137,7 +143,6 @@ class topography:
         print('peaks found at:')
         for i in self.peak_list:
             print(i)
-        
             
     def plot_2dfft(self,**args):
         if 'cmap' in args:

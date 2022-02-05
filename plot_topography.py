@@ -126,7 +126,7 @@ class topography:
                     if abs(self.fy[i])<dim[1] and abs(self.fx[i])<dim[0]:
                         self.fdata[i,j]*=filter_scale
         
-    def find_2dfft_peaks(self,height,distance,mag=0.0,dmag=0.05):
+    def find_2dfft_peaks(self,height,distance,mag=0.0,dmag=0.2):
         #mag selects the magnitude of reciprocal lattice vector that is returned. if mag is zero, all peaks are returned. otherwise, only peaks within dmag of mag are returned
         self.peak_list=[]
         for i in range(self.npts[1]):
@@ -137,9 +137,9 @@ class topography:
                         
                     
         self.peak_list=np.array(self.peak_list)
-        print('peaks found at:')
-        for i in self.peak_list:
-            print(i)
+        #print('peaks found at:')
+        #for i in self.peak_list:
+        #    print(i)
             
     def plot_2dfft(self,**args):
         if 'cmap' in args:
@@ -165,3 +165,30 @@ class topography:
         self.ax_fft.set(ylabel='position / 2$\pi$ $nm^{-1}$')
         self.ax_fft.set_aspect('equal')
         self.fig_fft.show()
+        
+    def opt_drift_via_lattice(self,dpts,drange,mag,lattice_angle=90,angle_tol=0.1,scaling='sqrt',height=0.8,distance=5):
+        min_angle=lattice_angle
+        min_drift=np.array([0.0,0.0])
+        data_copy=np.zeros(self.npts)+self.data
+        for i in range(-dpts//2,dpts//2+1):
+            for j in range(-dpts//2,dpts//2+1):
+                self.data=data_copy
+                v=np.array([i*drange/(dpts-1),j*drange/(dpts-1)])
+                self.drift_correct(v)
+                self.take_2dfft(scaling=scaling)
+                self.find_2dfft_peaks(height,distance,mag=mag)
+                a=[]
+                for j in self.peak_list:
+                    angle=np.arctan(j[1]/j[0])/np.pi*180
+                    for k in a:
+                        if abs(angle-k)<angle_tol:
+                            break
+                    else:
+                        a.append(angle)
+                if len(a)>0:
+                    if abs(abs(a[0]-a[1])-lattice_angle)<min_angle:
+                        min_drift=v
+                        min_angle=abs(abs(a[0]-a[1])-lattice_angle)
+                    
+        print(min_angle)
+        print(min_drift)

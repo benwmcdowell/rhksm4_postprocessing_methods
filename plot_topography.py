@@ -85,18 +85,12 @@ class topography:
         self.fig_main.show()
         
     def drift_correct(self,v):
-        coord=np.array([[self.x[j],self.y[i]] for j in range(self.npts[1]) for i in range(self.npts[0])])
-        raw_data=np.array([self.data[i,j] for j in range(self.npts[1]) for i in range(self.npts[0])])
+        coord=np.array([[self.x[j],self.y[i]] for i in range(self.npts[0]) for j in range(self.npts[1])])
+        raw_data=np.array([self.data[i,j] for i in range(self.npts[0]) for j in range(self.npts[1])])
         
-        drift_coord=np.array([[self.x[j]+v[0]*(j+self.npts[1]*i),self.y[i]+v[1]*(j+self.npts[1]*i)] for j in range(self.npts[1]) for i in range(self.npts[0])])
+        drift_coord=np.array([[self.x[j]+v[0]*(j+self.npts[0]*i),self.y[i]+v[1]*(j+self.npts[0]*i)] for i in range(self.npts[0]) for j in range(self.npts[1])])
         
-        print(np.shape(coord))
-        print(np.shape(raw_data))
-        print(np.shape(drift_coord))
-        
-        output=griddata(drift_coord,raw_data,coord)
-        
-        return output
+        self.data=griddata(drift_coord,raw_data,coord,method='nearest',fill_value=0.0).reshape(self.npts[0],self.npts[1])
         
     def take_2dfft(self,**args):
         scaling='linear'
@@ -131,13 +125,16 @@ class topography:
                 if filter_shape=='square':
                     if abs(self.fy[i])<dim[1] and abs(self.fx[i])<dim[0]:
                         self.fdata[i,j]*=filter_scale
-            
-    def find_2dfft_peaks(self,height,distance):
+        
+    def find_2dfft_peaks(self,height,distance,mag=0.0,dmag=0.05):
+        #mag selects the magnitude of reciprocal lattice vector that is returned. if mag is zero, all peaks are returned. otherwise, only peaks within dmag of mag are returned
         self.peak_list=[]
         for i in range(self.npts[1]):
             for j in range(self.npts[0]):
                 if i in find_peaks(self.fdata[:,j],height=height,distance=distance)[0] and j in find_peaks(self.fdata[i,:],height=height,distance=distance)[0]:
-                    self.peak_list.append(np.array([self.fx[j],self.fy[i]]))
+                    if mag==0.0 or abs(mag-np.linalg.norm(np.array([self.fx[j],self.fy[i]])))<dmag:
+                        self.peak_list.append(np.array([self.fx[j],self.fy[i]]))
+                        
                     
         self.peak_list=np.array(self.peak_list)
         print('peaks found at:')

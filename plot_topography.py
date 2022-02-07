@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.signal import savgol_filter,find_peaks
 from scipy.interpolate import griddata
+from pathos.multiprocessing import ProcessPool
 
 class topography:
     def __init__(self,ifile,**args):
@@ -166,29 +167,51 @@ class topography:
         self.ax_fft.set_aspect('equal')
         self.fig_fft.show()
         
-    def opt_drift_via_lattice(self,dpts,drange,mag,lattice_angle=90,angle_tol=0.1,scaling='sqrt',height=0.8,distance=5):
+    def opt_drift_via_lattice(self,dpts,drange,mag,lattice_angle=90,angle_tol=0.1,scaling='sqrt',height=0.8,distance=5,nprocs=1):
         min_angle=lattice_angle
         min_drift=np.array([0.0,0.0])
-        data_copy=np.zeros(self.npts)+self.data
-        for i in range(-dpts//2,dpts//2+1):
-            for j in range(-dpts//2,dpts//2+1):
-                self.data=data_copy
-                v=np.array([i*drange/(dpts-1),j*drange/(dpts-1)])
-                self.drift_correct(v)
-                self.take_2dfft(scaling=scaling)
-                self.find_2dfft_peaks(height,distance,mag=mag)
-                a=[]
-                for j in self.peak_list:
-                    angle=np.arctan(j[1]/j[0])/np.pi*180
-                    for k in a:
-                        if abs(angle-k)<angle_tol:
-                            break
-                    else:
-                        a.append(angle)
-                if len(a)>0:
-                    if abs(abs(a[0]-a[1])-lattice_angle)<min_angle:
-                        min_drift=v
-                        min_angle=abs(abs(a[0]-a[1])-lattice_angle)
+        self.dpts=dpts
+        self.drange=drange
+        self.mag=mag
+        self.lattice_angle=lattice_angle
+        self.angle_tol=angle_tol
+        self.fft_scaling=scaling
+        self.height=height
+        self.distance=distance
+        self.nprocs=nprocs
+        
+        pool=ProcessPool(self.nprocs)
+        output=pool.map(self.drift_correct_and_find_angle, [i for i in range(-dpts,dpts+1) for j in range(-dpts,dpts+1)], [j for i in range(-dpts,dpts+1) for j in range(-dpts,dpts+1)])
+        min_angles=np.array(output)[0,:]
+        drifts=np.array(output)[1,:]
+        pool.close()
+        
+        min_angle=np.min(min_angles)
+        min_drift=drifts[np.argmin(min_angles)]
                     
         print(min_angle)
         print(min_drift)
+        
+        def drift_correct_and_find_angle(self,i,j):
+            v=np.array([i*self.drange/(self.dpts-1),j*self.drange/(self.dpts-1)])
+            self.drift_correct(v)
+            self.take_2dfft(scaling=self.fft_scaling)
+            self.find_2dfft_peaks(self.peak_height,self.peak_distance,mag=self.mag)
+            a=[]
+            if len(self.peak_list)>3:
+                for j in self.peak_list:
+                    angle=np.arctan(j[1]/j[0])/np.pi*180
+                    for k in a:
+                        if abs(angle-k)<self.angle_tol:
+                            break
+                    else:
+                        a.append(angle)
+                if len(a)>1:
+                    min_angle=abs(abs(a[0]-a[1])-self.lattice_angle)
+                else:
+                    min_angle=self.lattice_angle
+            else:
+                min_angle=self.lattice_angle
+                    
+            return min_angle,v
+            

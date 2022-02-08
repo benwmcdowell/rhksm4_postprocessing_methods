@@ -5,6 +5,7 @@ from scipy.optimize import curve_fit
 from scipy.signal import savgol_filter,find_peaks
 from scipy.interpolate import griddata
 from pathos.multiprocessing import ProcessPool
+import json
 
 class topography:
     def __init__(self,ifile,**args):
@@ -182,36 +183,40 @@ class topography:
         
         pool=ProcessPool(self.nprocs)
         output=pool.map(self.drift_correct_and_find_angle, [i for i in range(-dpts,dpts+1) for j in range(-dpts,dpts+1)], [j for i in range(-dpts,dpts+1) for j in range(-dpts,dpts+1)])
-        min_angles=np.array(output)[0,:]
-        drifts=np.array(output)[1,:]
+        self.min_angles=np.array(output)[0,:]
+        self.drifts=np.array(output)[1,:]
         pool.close()
         
-        min_angle=np.min(min_angles)
-        min_drift=drifts[np.argmin(min_angles)]
-                    
-        print(min_angle)
-        print(min_drift)
+    def write_drift_calc_output(self,ofile):
+        with open(ofile,'w+') as f:
+            f.write(json.dumps([list(i) for i in [self.min_angles,self.drifts[:,0],self.drifts[:,1]]]))
+            
+    def read_file(self,ifile):
+        with open(ifile,'r') as f:
+            data=json.load(f)
+        self.min_angles=data[:,0]
+        self.drifts=data[:,1:]
         
-        def drift_correct_and_find_angle(self,i,j):
-            v=np.array([i*self.drange/(self.dpts-1),j*self.drange/(self.dpts-1)])
-            self.drift_correct(v)
-            self.take_2dfft(scaling=self.fft_scaling)
-            self.find_2dfft_peaks(self.peak_height,self.peak_distance,mag=self.mag)
-            a=[]
-            if len(self.peak_list)>3:
-                for j in self.peak_list:
-                    angle=np.arctan(j[1]/j[0])/np.pi*180
-                    for k in a:
-                        if abs(angle-k)<self.angle_tol:
-                            break
-                    else:
-                        a.append(angle)
-                if len(a)>1:
-                    min_angle=abs(abs(a[0]-a[1])-self.lattice_angle)
+    def drift_correct_and_find_angle(self,i,j):
+        v=np.array([i*self.drange/(self.dpts-1),j*self.drange/(self.dpts-1)])
+        self.drift_correct(v)
+        self.take_2dfft(scaling=self.fft_scaling)
+        self.find_2dfft_peaks(self.peak_height,self.peak_distance,mag=self.mag)
+        a=[]
+        if len(self.peak_list)>3:
+            for j in self.peak_list:
+                angle=np.arctan(j[1]/j[0])/np.pi*180
+                for k in a:
+                    if abs(angle-k)<self.angle_tol:
+                        break
                 else:
-                    min_angle=self.lattice_angle
+                    a.append(angle)
+            if len(a)>1:
+                min_angle=abs(abs(a[0]-a[1])-self.lattice_angle)
             else:
                 min_angle=self.lattice_angle
-                    
-            return min_angle,v
-            
+        else:
+            min_angle=self.lattice_angle
+                
+        return min_angle,v
+        

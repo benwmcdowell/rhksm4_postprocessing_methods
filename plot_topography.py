@@ -8,7 +8,7 @@ from pathos.multiprocessing import ProcessPool
 import json
 
 class topography:
-    def __init__(self,ifile,**args):
+    def __init__(self,ifile,invert=False,**args):
         #scale factor should be input as tuple: (xscale,yscale,zscale)
         if 'scalefactor' in args:
             self.sf=args['scalefactor']
@@ -29,6 +29,9 @@ class topography:
         self.x=np.array([self.f[3].attrs['RHK_Xoffset']+i*self.f[3].attrs['RHK_Xscale'] for i in range(np.shape(self.data)[1])])*1.0e9/self.sf[0]
         self.y=np.array([self.f[3].attrs['RHK_Yoffset']+i*self.f[3].attrs['RHK_Yscale'] for i in range(np.shape(self.data)[0])])*1.0e9/self.sf[1]
         
+        if invert:
+            self.data*=-1.0
+        
         self.data-=np.min(self.data)
         self.x-=np.min(self.x)
         self.y-=np.min(self.y)
@@ -40,7 +43,7 @@ class topography:
         for i in range(self.npts[1]):
             self.data[:,i]=savgol_filter(self.data[:,i],w,o)
         
-    def line_slope_subtract(self,*args):
+    def line_slope_subtract(self,**args):
         def linear_fit(x,a,b):
             y=a*x+b
             return y
@@ -56,9 +59,12 @@ class topography:
         fit_exclude=[[],[]]
         if 'range_exclude' in args:
             for i in range(2):
-                temprange=[np.argmin(abs(fit_exclude[i][j]-self.y)) for j in range(2)]
-                for j in range(temprange[0],temprange[1]+1):
+                temprange=[np.argmin(abs(args['range_exclude'][i][j]-[self.x,self.y][j])) for j in range(2)]
+                print(temprange)
+                for j in range(min(temprange),max(temprange)):
                     fit_exclude[i].append(j)
+        
+        print(fit_exclude)
         
         for i in range(self.npts[0]):
             tempdata=[]
@@ -73,11 +79,15 @@ class topography:
             yfit=linear_fit(self.x,popt[0],popt[1])
             self.data[i,:]-=yfit
         
-    def plot_topo(self,**args):
+    def plot_topo(self,norm=True,**args):
         if 'cmap' in args:
             cmap=args['cmap']
         else:
             cmap=plt.rcParams['image.cmap']
+            
+        if norm:
+            self.data/=np.max(self.data)
+            self.data-=np.min(self.data[np.nonzero(self.data)])
             
         self.fig_main,self.ax_main=plt.subplots(1,1,tight_layout=True)
         self.ax_main.pcolormesh([self.x for i in range(len(self.y))],[[self.y[j] for i in range(len(self.x))] for j in range(len(self.y))],self.data,cmap=cmap,shading='nearest')

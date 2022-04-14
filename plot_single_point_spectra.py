@@ -5,7 +5,7 @@ import numpy as np
 from scipy.signal import find_peaks
 from scipy.signal import savgol_filter
 
-def get_single_point(ifile,**args):
+def get_single_point(ifile,filter_params=(0,0),**args):
     f=rhksm4.load(ifile)
     scan_num=np.shape(f[0].data)[0]
     if 'average_scans' in args:
@@ -24,7 +24,10 @@ def get_single_point(ifile,**args):
     ydata=np.zeros(np.shape(f[0].data)[1])
     xdata=np.zeros(np.shape(f[0].data)[1])
     for i in average:
-        ydata+=f[page_num].data[i]*f[page_num].attrs['RHK_Zscale']+f[page_num].attrs['RHK_Zoffset'] #LIA current in pA
+        tempvar=f[page_num].data[i]*f[page_num].attrs['RHK_Zscale']+f[page_num].attrs['RHK_Zoffset'] #LIA current in pA
+        if filter_params!=(0,0):
+            tempvar=savgol_filter(tempvar,filter_params[0],filter_params[1])
+        ydata+=tempvar
     ydata/=len(average)
     xdata+=[f[0].attrs['RHK_Xoffset']+i*f[0].attrs['RHK_Xscale'] for i in range(len(ydata))] #bias in V
     setpoint=f[0].attrs['RHK_Current']/1e-12 #current setpoint in pA
@@ -66,18 +69,20 @@ def plot_single_point(ifiles,**args):
     else:
         total_current=False
         
+    if 'savgol_filter' in args:
+        filter_params=args['savgol_filter']
+    else:
+        filter_params=(0,0)
+        
     ydata=[]
     xdata=[]
     setpoints=[]
     num=len(ifiles)
     for i in ifiles:
-        tempvar=get_single_point(i,total_current=total_current)
+        tempvar=get_single_point(i,total_current=total_current,filter_params=filter_params)
         xdata.append(tempvar[0])
         ydata.append(tempvar[1])
         setpoints.append(tempvar[2])
-        if 'savgol_filter' in args:
-            w,o=args['savgol_filter']
-            ydata[-1]=savgol_filter(ydata[-1],w,o)
         if normalize:
             temp_range=[]
             for i in [min(norm_range),max(norm_range)]:

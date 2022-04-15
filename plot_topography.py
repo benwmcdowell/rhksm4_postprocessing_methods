@@ -60,21 +60,27 @@ class topography:
         if 'range_exclude' in args:
             for i in range(2):
                 temprange=[np.argmin(abs(args['range_exclude'][i][j]-[self.x,self.y][j])) for j in range(2)]
-                print(temprange)
                 for j in range(min(temprange),max(temprange)):
                     fit_exclude[i].append(j)
         
-        print(fit_exclude)
-        
+        if 'slope_subtract_range' in args:
+            slope_subtract_range=args['slope_subtract_range']
+            slope_subtract_range=np.argmin(abs(args['slope_subtract_range']-self.y))
+            print('averaging {} lines together in slope subtract'.format(2*slope_subtract_range+1))
+        else:
+            slope_subtract_range=0
+            
         for i in range(self.npts[0]):
             tempdata=[]
             tempx=[]
             for j in range(self.npts[1]):
-                if i in fit_exclude[0] and j in fit_exclude[1]:
-                    pass
-                else:
-                    tempdata.append(self.data[i,j])
-                    tempx.append(self.x[j])
+                for k in range(-1*slope_subtract_range,slope_subtract_range+1):
+                    if i+k>=0 and i+k<len(self.x):
+                        if i+k in fit_exclude[0] and j in fit_exclude[1]:
+                            pass
+                        else:
+                            tempdata.append(self.data[i+k,j])
+                            tempx.append(self.x[j])
             popt,pcov=curve_fit(linear_fit,tempx,tempdata)
             yfit=linear_fit(self.x,popt[0],popt[1])
             self.data[i,:]-=yfit

@@ -84,6 +84,40 @@ class topography:
             popt,pcov=curve_fit(linear_fit,tempx,tempdata)
             yfit=linear_fit(self.x,popt[0],popt[1])
             self.data[i,:]-=yfit
+            
+    def plot_horizontal_slice(self,pos):
+        if not hasattr(self,'fig_hslice'):
+            self.fig_hslice,self.ax_hslice=plt.subplots(1,1,tight_layout=True)
+        if type(pos)==list:
+            for p in pos:
+                i=np.argmin(abs(self.x-p))
+                self.ax_hslice.plot(self.x,self.data[i,:],label='{} nm'.format(p))
+                self.ax_main.plot([self.x[0],self.x[-1]],[p,p])
+        else:
+            i=np.argmin(abs(self.x-pos))
+            self.ax_hslice.plot(self.x,self.data[i,:])
+            self.ax_main.plot([self.x[0],self.x[-1]],[pos,pos])
+        self.ax_hslice.set(xlabel='position / $\AA$')
+        self.ax_hslice.set(ylabel='topography height / nm')
+        self.ax_hslice.legend()
+        self.fig_hslice.show()
+        
+    def plot_vertical_slice(self,pos):
+        if not hasattr(self,'fig_hslice'):
+            self.fig_vslice,self.ax_vslice=plt.subplots(1,1,tight_layout=True)
+        if type(pos)==list:
+            for p in pos:
+                i=np.argmin(abs(self.y-p))
+                self.ax_vslice.plot(self.y,self.data[:,i],label='{} nm'.format(p))
+                self.ax_main.plot([p,p],[self.y[0],self.y[-1]])
+        else:
+            i=np.argmin(abs(self.y-pos))
+            self.ax_vslice.plot(self.y,self.data[:,i])
+            self.ax_main.plot([pos,pos],[self.y[0],self.y[-1]])
+        self.ax_vslice.set(xlabel='position / $\AA$')
+        self.ax_vslice.set(ylabel='topography height / nm')
+        self.ax_vslice.legend()
+        self.fig_vslice.show()
         
     def plot_topo(self,norm=True,**args):
         if 'cmap' in args:

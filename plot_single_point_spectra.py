@@ -91,7 +91,7 @@ def plot_single_point(ifiles,**args):
         if 'fit_range' in args:
             fit_range=args['fit_range']
         else:
-            fit_range=[np.min(xdata),np.max(xdata)]
+            fit_range=[np.min(xdata[-1]),np.max(xdata[-1])]
         for j in range(2):
             fit_range[j]=np.argmin(abs(fit_range[j]-xdata[-1]))
             

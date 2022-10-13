@@ -5,7 +5,7 @@ from scipy.fft import fft,fftfreq
 from scipy.signal.windows import hann
 from scipy.signal import savgol_filter
 import numpy as np
-import sys
+import pyperclip
 
 class dIdV_line:
     def __init__(self,ifile,**args):
@@ -254,6 +254,9 @@ class dIdV_line:
         errors*=1e-10
         h=6.626e-34 #J*s
         m=9.10938356e-31 #kg
+        self.energies=energies
+        self.lengths=lengths
+        self.errors=errors
         if linear_fit=='e_independent':
             tempx=h/np.sqrt(energies)/np.sqrt(2)
             popt,pcov=curve_fit(line_fit,tempx,lengths,p0=[3/np.sqrt(m),0.0],sigma=errors)
@@ -294,3 +297,13 @@ class dIdV_line:
             self.LIAcurrent[i]=savgol_filter(self.LIAcurrent[i],w,o)
         for i in range(len(self.pos)):
             self.LIAcurrent[:,i]=savgol_filter(self.LIAcurrent[:,i],w,o)
+            
+    def copy_peaks(self,cutoff=1e-9):
+        tempvar=''
+        for i in range(len(self.errors)):
+            if self.errors[i]<cutoff:
+                for k in [self.energies[i],self.lengths[i],self.errors[i]]:
+                    tempvar+=str(k)
+                    tempvar+='\t'
+                tempvar+='\n'
+        pyperclip.copy(tempvar)

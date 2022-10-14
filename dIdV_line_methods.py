@@ -86,6 +86,8 @@ class dIdV_line:
         self.dIdVmap=self.ax_main.pcolormesh(x,y,self.LIAcurrent,cmap=cmap,shading='nearest')
         self.ax_main.set(xlabel='position / $\AA$')
         self.ax_main.set(ylabel='bias / V')
+        self.ax_main.set_xlim(np.min(self.pos)-(self.pos[1]-self.pos[0])/2, np.max(self.pos)-(self.pos[-1]-self.pos[-2])/2)
+        self.ax_main.set_ylim(np.min(self.energy)-(self.energy[1]-self.energy[0])/2, np.max(self.energy)-(self.energy[-1]-self.energy[-2])/2)
         self.fig_main.show()
         
     def clear_energy_axes(self):
@@ -108,7 +110,7 @@ class dIdV_line:
         self.ax_eslice.legend()
         self.fig_eslice.show()
         
-    def plot_position_slice(self,pos,**args):
+    def plot_position_slice(self,pos,plot_onsets=False,**args):
         if 'find_onset' in args:
             find_onset=True
             onsets=[]
@@ -123,14 +125,24 @@ class dIdV_line:
             pos=[pos]
         for p in pos:
             i=np.argmin(abs(self.pos-p))
-            self.ax_pslice.plot(self.energy,self.LIAcurrent[:,i],label='{} $\AA$'.format(p))
             self.ax_main.plot([p,p],[self.energy[0],self.energy[-1]])
+            self.ax_pslice.plot(self.energy,self.LIAcurrent[:,i],label='{} $\AA$'.format(p))
             if find_onset:
                 onset_height=(np.max(self.LIAcurrent[onset_range[0]:onset_range[1],i])+np.min(self.LIAcurrent[onset_range[0]:onset_range[1],i]))/2
+
                 onsets.append(self.energy[np.argmin(abs(self.LIAcurrent[:,i]-onset_height))])
                 self.ax_pslice.plot([onsets[-1] for j in range(2)],[min(self.LIAcurrent[[onset_range[0],onset_range[1]],i]),max(self.LIAcurrent[[onset_range[0],onset_range[1]],i])],label='onset')
-                if p==pos[-1]:
-                    print('average 2d band onset: {} +/- {} eV'.format(np.mean(onsets),np.std(onsets)))
+                
+        if find_onset:
+            print('average 2d band onset: {} +/- {} eV'.format(np.mean(onsets),np.std(onsets)))
+            
+        if plot_onsets:
+            self.fig_onsets,self.ax_onsets=plt.subplots(1,1,tight_layout=True)
+            self.ax_onsets.plot(pos,onsets)
+            self.ax_onsets.set(xlabel='position / $\AA$')
+            self.ax_onsets.set(ylabel='bias / eV')
+            self.fig_onsets.show()
+            
         self.ax_pslice.set(xlabel='bias / eV')
         self.ax_pslice.set(ylabel='LIA current / pA')
         self.ax_pslice.legend()
@@ -170,9 +182,9 @@ class dIdV_line:
             xmax=len(self.pos)-1
             
         if 'linear_fit' in args:
-            linear_fit='e_independent'
-        else:
             linear_fit='e_dependent'
+        else:
+            linear_fit='e_independent'
         
         if 'overlay_peaks' in args:
             overlay_peaks=args['overlay_peaks']
@@ -184,7 +196,7 @@ class dIdV_line:
             if linear_fit=='e_dependent':
                 print('warning: onset energy is selected as an optimizable parameter and specified as an input value. remove onset from the input arguments or set linear_fit=e_independent')
         else:
-            onset_energy=0.0
+            onset_energy=0.1
             
         #scatter_side determines which side of the scattering source to model
         #default is both; options are left, right, both
@@ -246,7 +258,8 @@ class dIdV_line:
         lengths=np.array(lengths)
         errors=np.array(errors)
         k=1.6022e-19 #J/eV
-        energies-=onset_energy
+        if linear_fit=='e_independent':
+            energies-=onset_energy
         energies*=k
         lengths*=1e-10
         if scatter_side!='both':

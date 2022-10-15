@@ -110,35 +110,59 @@ class dIdV_line:
         self.ax_eslice.legend()
         self.fig_eslice.show()
         
-    def plot_position_slice(self,pos,plot_onsets=False,**args):
+    def plot_position_slice(self,pos,plot_onsets=False,exclude_range=None,**args):
+        def cos(x,a,b,f,phi):
+            y=a*np.cos(f*2*np.pi*x+phi)+b
+            return y
+        
         if 'find_onset' in args:
             find_onset=True
             onsets=[]
+            onset_pos=[]
             onset_range=args['find_onset']
             for i in range(2):
                 onset_range[i]=np.argmin(abs(self.energy-onset_range[i]))
         else:
             find_onset=False
-        
+            
+        if exclude_range:
+            if len(np.shape(exclude_range))==1:
+                for i in range(2):
+                    exclude_range[i]=np.argmin(abs(self.pos-exclude_range[i]))
+                exclude_range=[exclude_range]
+            else:
+                for i in range(len(exclude_range)):
+                    for j in range(2):
+                        exclude_range[i][j]=np.argmin(abs(self.pos-exclude_range[i][j]))
+        else:
+            exclude_range=[[-5,-5]]
+                        
         self.fig_pslice,self.ax_pslice=plt.subplots(1,1,tight_layout=True)
-        if type(pos) != list:
+        try:
+            tempvar=len(pos)
+        except TypeError:
             pos=[pos]
         for p in pos:
             i=np.argmin(abs(self.pos-p))
             self.ax_main.plot([p,p],[self.energy[0],self.energy[-1]])
             self.ax_pslice.plot(self.energy,self.LIAcurrent[:,i],label='{} $\AA$'.format(p))
             if find_onset:
-                onset_height=(np.max(self.LIAcurrent[onset_range[0]:onset_range[1],i])+np.min(self.LIAcurrent[onset_range[0]:onset_range[1],i]))/2
-
-                onsets.append(self.energy[np.argmin(abs(self.LIAcurrent[:,i]-onset_height))])
-                self.ax_pslice.plot([onsets[-1] for j in range(2)],[min(self.LIAcurrent[[onset_range[0],onset_range[1]],i]),max(self.LIAcurrent[[onset_range[0],onset_range[1]],i])],label='onset')
-                
+                for j in exclude_range:
+                    if p>j[0] and p<j[1]:
+                        break
+                    else:
+                        onset_height=(np.max(self.LIAcurrent[onset_range[0]:onset_range[1],i])+np.min(self.LIAcurrent[onset_range[0]:onset_range[1],i]))/2
+        
+                        onsets.append(self.energy[np.argmin(abs(self.LIAcurrent[:,i]-onset_height))])
+                        self.ax_pslice.plot([onsets[-1] for j in range(2)],[min(self.LIAcurrent[[onset_range[0],onset_range[1]],i]),max(self.LIAcurrent[[onset_range[0],onset_range[1]],i])],label='onset')
+                        onset_pos.append(p)
+                        
         if find_onset:
             print('average 2d band onset: {} +/- {} eV'.format(np.mean(onsets),np.std(onsets)))
             
         if plot_onsets:
             self.fig_onsets,self.ax_onsets=plt.subplots(1,1,tight_layout=True)
-            self.ax_onsets.plot(pos,onsets)
+            self.ax_onsets.scatter(onset_pos,onsets)
             self.ax_onsets.set(xlabel='position / $\AA$')
             self.ax_onsets.set(ylabel='bias / eV')
             self.fig_onsets.show()

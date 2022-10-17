@@ -6,6 +6,7 @@ from scipy.signal.windows import hann
 from scipy.signal import savgol_filter
 import numpy as np
 import pyperclip
+import csv
 
 class dIdV_line:
     def __init__(self,ifile,**args):
@@ -344,3 +345,41 @@ class dIdV_line:
                     tempvar+='\t'
                 tempvar+='\n'
         pyperclip.copy(tempvar)
+        
+def read_peaks(fp):
+    file=open(fp,'r')
+    csvfile=csv.reader(file,delimiter=',')
+    lines=[]
+    for i in csvfile:
+        lines.append(i)
+    lines=np.array(lines)
+    energies=[]
+    lengths=[]
+    errors=[]
+    for i in range(np.shape(lines)[1]):
+        if 'energies' in lines[2,i]:
+            for j in range(3,np.shape(lines)[0]):
+                if len(lines[j,i])==0:
+                    break
+                else:
+                    energies.append(float(lines[j,i]))
+        if 'lengths' in lines[2,i]:
+            for j in range(3,np.shape(lines)[0]):
+                if len(lines[j,i])==0:
+                    break
+                else:
+                    lengths.append(float(lines[j,i]))
+        if 'errors' in lines[2,i]:
+            for j in range(3,np.shape(lines)[0]):
+                if len(lines[j,i])==0:
+                    break
+                else:
+                    errors.append(float(lines[j,i]))
+            
+    energies=np.array(energies)
+    lengths=np.array(lengths)
+    errors=np.array(errors)
+    min_error=np.min(errors[np.nonzero(errors)])
+    for i in range(len(errors)):
+        if errors[i]==0:
+            errors[i]=min_error

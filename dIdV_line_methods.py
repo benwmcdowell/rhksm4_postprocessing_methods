@@ -300,7 +300,7 @@ class dIdV_line:
         else:
             popt,pcov=curve_fit(edependent_line_fit,energies,lengths,p0=[1/np.sqrt(m),5*1e-10,0.1*k],sigma=errors)
             tempx=h/np.sqrt(energies-popt[2])/np.sqrt(2)
-        self.ax_fit.scatter(tempx/np.sqrt(m)*1e9,lengths*1e9,label='raw data')
+        self.ax_fit.errorbar(tempx/np.sqrt(m)*1e9,lengths*1e9,yerr=errors*1e9,label='raw data',fmt='o')
         self.ax_fit.plot(tempx/np.sqrt(m)*1e9,line_fit(tempx,popt[0],popt[1])*1e9,label='fit')
         self.ax_fit.legend()
         self.ax_fit.set(xlabel='h$(2E$m_e$)^{-1/2}$ / nm')

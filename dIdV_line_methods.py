@@ -346,7 +346,7 @@ class dIdV_line:
                 tempvar+='\n'
         pyperclip.copy(tempvar)
         
-def read_peaks(fp):
+def read_peaks(fp,scatter_side='both',linear_fit='e_independent',onset_energy=0.1):
     file=open(fp,'r')
     csvfile=csv.reader(file,delimiter=',')
     lines=[]
@@ -383,3 +383,36 @@ def read_peaks(fp):
     for i in range(len(errors)):
         if errors[i]==0:
             errors[i]=min_error
+            
+    fig_fit,ax_fit=plt.subplots(1,1,tight_layout=True)
+    k=1.6022e-19 #J/eV
+    h=6.626e-34 #J*s
+    m=9.10938356e-31 #kg
+    if linear_fit=='e_independent':
+        tempx=h/np.sqrt(energies)/np.sqrt(2)
+        popt,pcov=curve_fit(line_fit,tempx,lengths,p0=[2/np.sqrt(m),-1],sigma=errors)
+    else:
+        popt,pcov=curve_fit(edependent_line_fit,energies,lengths,p0=[1/np.sqrt(m),5*1e-10,0.1*k],sigma=errors)
+        tempx=h/np.sqrt(energies-popt[2])/np.sqrt(2)
+    ax_fit.errorbar(tempx/np.sqrt(m)*1e9,lengths*1e9,yerr=errors*1e9,label='raw data',fmt='o')
+    ax_fit.plot(tempx/np.sqrt(m)*1e9,line_fit(tempx,popt[0],popt[1])*1e9,label='fit')
+    ax_fit.legend()
+    ax_fit.set(xlabel='h$(2E$m_e$)^{-1/2}$ / nm')
+    ax_fit.set(ylabel='d / nm')
+    fig_fit.show()
+    pcov=np.sqrt(np.diag(pcov))
+    print('m* = {} +/- {}'.format(popt[0]**-2/m,pcov[0]/popt[0]**3/m))
+    print('R = {} +/- {} Angstroms'.format(popt[1]*1e10,pcov[1]*1e10))
+    if len(popt)>2:
+        print('band onset = {} +/- {} eV'.format(popt[2]/k,pcov[2]/k))
+        
+    return energies, lengths, errors
+        
+def line_fit(x,a,b):
+    y=a*x+b
+    return y
+
+def edependent_line_fit(x,a,b,c):
+    h=6.626e-34 #J*s
+    y=a*h/np.sqrt(x-c)/np.sqrt(2)+b
+    return y

@@ -9,7 +9,7 @@ import pyperclip
 import csv
 
 class dIdV_line:
-    def __init__(self,ifile,**args):
+    def __init__(self,ifile,fb_off=True,**args):
         if 'line_num' not in args:
             self.line_num=0
         else:
@@ -22,11 +22,20 @@ class dIdV_line:
             
         self.f=rhksm4.load(ifile)
         self.size=int(np.shape(self.f[0].data)[0])
-        self.npts=int(np.shape(self.f[4].data)[1])
-        self.energy=np.array([self.f[4].attrs['RHK_Xoffset']+i*self.f[4].attrs['RHK_Xscale'] for i in range(self.npts)])
         self.pos=np.array([self.f[0].attrs['RHK_Xoffset']+i*self.f[0].attrs['RHK_Xscale'] for i in range(self.size)])*1.0e10/self.sf 
-        self.LIAcurrent=np.array([self.f[4].data[self.size*self.line_num:self.size*(self.line_num+1)]])
-        self.current=np.array([self.f[5].data[self.size*self.line_num:self.size*(self.line_num+1)]])
+        self.fb_off=fb_off
+        
+        if self.fb_off:
+            self.npts=int(np.shape(self.f[4].data)[1])
+            self.LIAcurrent=np.array([self.f[4].data[self.size*self.line_num:self.size*(self.line_num+1)]])
+            self.current=np.array([self.f[5].data[self.size*self.line_num:self.size*(self.line_num+1)]])
+            self.energy=np.array([self.f[4].attrs['RHK_Xoffset']+i*self.f[4].attrs['RHK_Xscale'] for i in range(self.npts)])
+            
+        else:
+            self.npts=int(np.shape(self.f[6].data)[1])
+            self.LIAcurrent=np.array([self.f[6].data[self.size*self.line_num:self.size*(self.line_num+1)]])
+            self.current=np.array([self.f[7].data[self.size*self.line_num:self.size*(self.line_num+1)]])
+            self.energy=np.array([self.f[6].attrs['RHK_Xoffset']+i*self.f[6].attrs['RHK_Xscale'] for i in range(self.npts)])
         
         self.energy=self.energy[::-1] #bias in V
         self.pos=abs(self.pos-max(self.pos)) #postion along line in $\AA$

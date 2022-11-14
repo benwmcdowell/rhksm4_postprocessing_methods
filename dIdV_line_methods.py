@@ -37,7 +37,7 @@ class dIdV_line:
             self.current=np.array([self.f[7].data[self.size*self.line_num:self.size*(self.line_num+1)]])
             self.energy=np.array([self.f[6].attrs['RHK_Xoffset']+i*self.f[6].attrs['RHK_Xscale'] for i in range(self.npts)])
             self.z_fbon=np.array([self.f[8].data[self.size*self.line_num:self.size*(self.line_num+1)]])
-            self.z_fbon=np.log(self.z_fbon[0,:,:].T*1.0e9)
+            self.z_fbon=self.z_fbon[0,:,:].T*1.0e9
         
         self.energy=self.energy[::-1] #bias in V
         self.pos=abs(self.pos-max(self.pos)) #postion along line in $\AA$
@@ -100,6 +100,8 @@ class dIdV_line:
         self.ax_main.set(ylabel='bias / V')
         self.ax_main.set_xlim(np.min(self.pos)-(self.pos[1]-self.pos[0])/2, np.max(self.pos)-(self.pos[-1]-self.pos[-2])/2)
         self.ax_main.set_ylim(np.min(self.energy)-(self.energy[1]-self.energy[0])/2, np.max(self.energy)-(self.energy[-1]-self.energy[-2])/2)
+        self.cbar_main=self.fig_main.colorbar(self.dIdVmap)
+        self.cbar_main.set_label('LIA current / pA')
         self.fig_main.show()
         
         if not self.fb_off:
@@ -107,6 +109,8 @@ class dIdV_line:
             self.zmap=self.ax_z.pcolormesh(x,y,self.z_fbon,cmap=cmap,shading='nearest')
             self.ax_z.set(xlabel='position / $\AA$')
             self.ax_z.set(ylabel='bias / V')
+            self.cbar_z=self.fig_z.colorbar(self.zmap)
+            self.cbar_z.set_label('height / nm')
             self.fig_z.show()
         
     def clear_energy_axes(self):

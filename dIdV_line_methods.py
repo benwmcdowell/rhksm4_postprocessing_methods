@@ -9,7 +9,7 @@ import pyperclip
 import csv
 
 class dIdV_line:
-    def __init__(self,ifile,fb_off=True,**args):
+    def __init__(self,ifile,fb_off=True,norm_z=True,**args):
         if 'line_num' not in args:
             self.line_num=0
         else:
@@ -24,6 +24,7 @@ class dIdV_line:
         self.size=int(np.shape(self.f[0].data)[0])
         self.pos=np.array([self.f[0].attrs['RHK_Xoffset']+i*self.f[0].attrs['RHK_Xscale'] for i in range(self.size)])*1.0e10/self.sf 
         self.fb_off=fb_off
+        self.norm_z=norm_z
         
         if self.fb_off:
             self.npts=int(np.shape(self.f[4].data)[1])
@@ -37,7 +38,10 @@ class dIdV_line:
             self.current=np.array([self.f[7].data[self.size*self.line_num:self.size*(self.line_num+1)]])
             self.energy=np.array([self.f[6].attrs['RHK_Xoffset']+i*self.f[6].attrs['RHK_Xscale'] for i in range(self.npts)])
             self.z_fbon=np.array([self.f[8].data[self.size*self.line_num:self.size*(self.line_num+1)]])
-            self.z_fbon=self.z_fbon[0,:,:].T*1.0e9
+            self.z_fbon=self.z_fbon[0,:,:].T*self.f[8].attrs['RHK_Zscale']*-1e9
+            if self.norm_z:
+                for i in range(self.size):
+                    self.z_fbon[:,i]-=np.min(self.z_fbon[:,i])
         
         self.energy=self.energy[::-1] #bias in V
         self.pos=abs(self.pos-max(self.pos)) #postion along line in $\AA$
@@ -161,6 +165,9 @@ class dIdV_line:
             exclude_range=[[-5,-5]]
                         
         self.fig_pslice,self.ax_pslice=plt.subplots(1,1,tight_layout=True)
+        if not self.fb_off:
+            self.fig_pslice_z,self.ax_pslice_z=plt.subplots(1,1,tight_layout=True)
+            
         try:
             tempvar=len(pos)
         except TypeError:
@@ -169,6 +176,8 @@ class dIdV_line:
             i=np.argmin(abs(self.pos-p))
             self.ax_main.plot([p,p],[self.energy[0],self.energy[-1]])
             self.ax_pslice.plot(self.energy,self.LIAcurrent[:,i],label='{} $\AA$'.format(p))
+            if not self.fb_off:
+                self.ax_pslice_z.plot(self.energy,self.z_fbon[:,i],label='{} $\AA$'.format(p))
             if find_onset:
                 for j in exclude_range:
                     if p>j[0] and p<j[1]:
@@ -195,6 +204,12 @@ class dIdV_line:
         self.ax_pslice.legend()
         self.fig_pslice.show()
         
+        if not self.fb_off:
+            self.ax_pslice_z.set(xlabel='bias / eV')
+            self.ax_pslice_z.set(ylabel='height / nm')
+            self.ax_pslice_z.legend()
+            self.fig_pslice_z.show()
+            
     def overlay_bounds(self,pos):
         for i in pos:
             self.boundline=self.ax_main.plot([self.pos[0],self.pos[-1]],[i,i],color='white',linestyle='dashed')

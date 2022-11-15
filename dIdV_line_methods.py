@@ -38,7 +38,7 @@ class dIdV_line:
             self.current=np.array([self.f[7].data[self.size*self.line_num:self.size*(self.line_num+1)]])
             self.energy=np.array([self.f[6].attrs['RHK_Xoffset']+i*self.f[6].attrs['RHK_Xscale'] for i in range(self.npts)])
             self.z_fbon=np.array([self.f[8].data[self.size*self.line_num:self.size*(self.line_num+1)]])
-            self.z_fbon=self.z_fbon[0,:,:].T*self.f[8].attrs['RHK_Zscale']*-1e9
+            self.z_fbon=self.z_fbon[0,:,:].T[::-1]*self.f[8].attrs['RHK_Zscale']*1e9
             if self.norm_z:
                 for i in range(self.size):
                     self.z_fbon[:,i]-=np.min(self.z_fbon[:,i])

@@ -7,7 +7,7 @@ from scipy.signal import savgol_filter
 from scipy.optimize import curve_fit
 
 class dIdV_map():
-    def __init__(self,ifile,**args):
+    def __init__(self,ifile,fb_on=True,**args):
         self.f=rhksm4.load(ifile)
         if 'scalefactor' in args:
             self.sf=args['scalefactor']
@@ -40,11 +40,19 @@ class dIdV_map():
         self.x-=np.min(self.x)
         self.y-=np.min(self.y)
         
-        self.epoints=np.array([self.f[4].attrs['RHK_Xoffset']+self.f[4].attrs['RHK_Xscale']*i for i in range(np.shape(self.f[4].data)[1])])
-        self.z=np.zeros((len(self.epoints),self.npts[0],self.npts[1]))
-        for i in range(np.shape(self.f[4].data)[0]):
-            for j in range(np.shape(self.f[4].data)[1]):
-                self.z[j,i//self.npts[0],i%self.npts[0]]=self.f[4].data[i,j]*self.f[4].attrs['RHK_Zscale']+self.f[4].attrs['RHK_Zoffset']
+        if fb_on:
+            self.epoints=np.array([self.f[4].attrs['RHK_Xoffset']+self.f[4].attrs['RHK_Xscale']*i for i in range(np.shape(self.f[4].data)[1])])
+            self.z=np.zeros((len(self.epoints),self.npts[0],self.npts[1]))
+            for i in range(np.shape(self.f[4].data)[0]):
+                for j in range(np.shape(self.f[4].data)[1]):
+                    self.z[j,i//self.npts[0],i%self.npts[0]]=self.f[4].data[i,j]*self.f[4].attrs['RHK_Zscale']+self.f[4].attrs['RHK_Zoffset']
+                    
+        else:
+            self.epoints=np.array([self.f[6].attrs['RHK_Xoffset']+self.f[6].attrs['RHK_Xscale']*i for i in range(np.shape(self.f[6].data)[1])])
+            self.z=np.zeros((len(self.epoints),self.npts[0],self.npts[1]))
+            for i in range(np.shape(self.f[6].data)[0]):
+                for j in range(np.shape(self.f[6].data)[1]):
+                    self.z[j,i//self.npts[0],i%self.npts[0]]=self.f[6].data[i,j]*self.f[6].attrs['RHK_Zscale']+self.f[6].attrs['RHK_Zoffset']
 
         if normalize:
             for i in range(len(self.epoints)):

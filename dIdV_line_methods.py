@@ -383,7 +383,7 @@ class dIdV_line:
                 tempvar+='\n'
         pyperclip.copy(tempvar)
         
-def read_peaks(fp,scatter_side='both',linear_fit='e_independent',onset_energy=0.1):
+def read_peaks(fp,scatter_side='both',linear_fit='e_independent',onset_energy=0.1,erange=(-np.inf,np.inf)):
     file=open(fp,'r')
     csvfile=csv.reader(file,delimiter=',')
     lines=[]
@@ -399,19 +399,22 @@ def read_peaks(fp,scatter_side='both',linear_fit='e_independent',onset_energy=0.
                 if len(lines[j,i])==0:
                     break
                 else:
-                    energies.append(float(lines[j,i]))
+                    if float(lines[j,i])>np.min(erange) and float(lines[j,i])<np.max(erange):
+                        energies.append(float(lines[j,i]))
         if 'lengths' in lines[2,i]:
             for j in range(3,np.shape(lines)[0]):
                 if len(lines[j,i])==0:
                     break
                 else:
-                    lengths.append(float(lines[j,i]))
+                    if float(lines[j,i-1])>np.min(erange) and float(lines[j,i-1])<np.max(erange):
+                        lengths.append(float(lines[j,i]))
         if 'errors' in lines[2,i]:
             for j in range(3,np.shape(lines)[0]):
                 if len(lines[j,i])==0:
                     break
                 else:
-                    errors.append(float(lines[j,i]))
+                    if float(lines[j,i-2])>np.min(erange) and float(lines[j,i-2])<np.max(erange):
+                        errors.append(float(lines[j,i]))
             
     energies=np.array(energies)
     lengths=np.array(lengths)

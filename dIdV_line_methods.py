@@ -128,6 +128,11 @@ class dIdV_line:
                 i=np.argmin(abs(self.energy-e))
                 self.ax_eslice.plot(self.pos,self.LIAcurrent[i],label='{} eV'.format(e))
                 self.ax_main.plot([self.pos[0],self.pos[-1]],[e,e])
+                if self.energy[i] in self.peak_energies:
+                    for j in range(len(self.peak_energies)):
+                        if self.energy[i]==self.peak_energies[j]:
+                            x=np.argmin(abs(self.peak_pos[j]-self.pos))
+                            self.ax_eslice.errorbar(self.peak_pos[j],self.LIAcurrent[i,x],xerr=self.peak_errors[j],c='black',fmt='o')
         else:
             i=np.argmin(abs(self.energy-energy))
             self.ax_eslice.plot(self.pos,self.LIAcurrent[i])
@@ -315,6 +320,10 @@ class dIdV_line:
         if overlay_peaks:
             self.ax_main.errorbar(peak_pos,peak_energies,xerr=peak_errors,fmt='o')
             
+        self.peak_pos=peak_pos
+        self.peak_energies=peak_energies
+        self.peak_errors=peak_errors
+            
         self.fig_fit,self.ax_fit=plt.subplots(1,1,tight_layout=True)
         energies=np.array(energies)
         lengths=np.array(lengths)
@@ -384,6 +393,7 @@ class dIdV_line:
         pyperclip.copy(tempvar)
         
 def read_peaks(fp,scatter_side='both',linear_fit='e_independent',onset_energy=0.1,erange=(-np.inf,np.inf)):
+    erange=[i*1.6022e-19 for i in erange]
     file=open(fp,'r')
     csvfile=csv.reader(file,delimiter=',')
     lines=[]

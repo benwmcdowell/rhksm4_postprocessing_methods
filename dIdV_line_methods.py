@@ -238,8 +238,11 @@ class dIdV_line:
             y=a*h/np.sqrt(x-c)/np.sqrt(2)+b
             return y
         
-        def bessel_fit(x,k,u,x0):
-            y=1-2*u*j0(k*abs(x-x0))*y0(k*abs(x-x0))
+        def bessel_fit(x,k,u,x0,b):
+            y=1-2*u*j0(k*abs(x-x0))*y0(k*abs(x-x0))+b
+            for i in range(len(y)):
+                if abs(y[i])>0.5*abs(u):
+                    y[i]=u
             return y
         
         center=np.argmin(abs(self.pos-center))
@@ -311,8 +314,9 @@ class dIdV_line:
             energies.append(self.energy[i])
             pcov=np.sqrt(np.diag(pcov))
             
-            bounds=([0,-10,self.pos[center]-10],[np.inf,10,self.pos[center]+10])
-            p0=[3/np.avg([self.pos[center]-popt[0],popt[1]-self.pos[center]]),0,self.pos[center]]
+            bounds=([0,-10,self.pos[center]-10,-np.inf],[np.inf,10,self.pos[center]+10,np.inf])
+            p0=[3/np.average([self.pos[center]-popt[0],popt[1]-self.pos[center]]),.001,self.pos[center],np.average(self.LIAcurent[i,xmin:xmax])]
+            print(p0)
             popt_b,pcov_b=curve_fit(bessel_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
             pcov_b=np.sqrt(np.diag(pcov_b))
             k_fit.append(popt_b[0])

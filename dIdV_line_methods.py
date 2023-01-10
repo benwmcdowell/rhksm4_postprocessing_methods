@@ -316,7 +316,6 @@ class dIdV_line:
             
             bounds=([0,-10,self.pos[center]-10,-np.inf],[np.inf,10,self.pos[center]+10,np.inf])
             p0=[3/np.average([self.pos[center]-popt[0],popt[1]-self.pos[center]]),.001,self.pos[center],np.average(self.LIAcurrent[i,xmin:xmax])]
-            print(p0)
             popt_b,pcov_b=curve_fit(bessel_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
             pcov_b=np.sqrt(np.diag(pcov_b))
             k_fit.append(popt_b[0])
@@ -393,7 +392,7 @@ class dIdV_line:
         if len(popt)>2:
             print('band onset = {} +/- {} eV'.format(popt[2]/k,pcov[2]/k))
             
-        popt,pcov=curve_fit(line_fit,(k_fit*1e10)**2,energies,p0=(h**2/2/m,0),y_err=(k_errors*1e10)**2)
+        popt,pcov=curve_fit(line_fit,(k_fit*1e10)**2,energies,p0=(h**2/2/m,0),sigma=(k_errors*1e10)**2)
         pcov=np.sqrt(np.diag(pcov))
         print('calculated from Dirac potential, Bessel functions:')
         print('m* = {} +/- {}'.format(h**2/popt[0]/2,h**2/pcov[0]/2))

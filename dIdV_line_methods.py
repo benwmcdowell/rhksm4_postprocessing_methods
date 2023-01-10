@@ -315,7 +315,7 @@ class dIdV_line:
             pcov=np.sqrt(np.diag(pcov))
             
             bounds=([0,-10,self.pos[center]-10,-np.inf],[np.inf,10,self.pos[center]+10,np.inf])
-            p0=[3/np.average([self.pos[center]-popt[0],popt[1]-self.pos[center]]),.001,self.pos[center],np.average(self.LIAcurent[i,xmin:xmax])]
+            p0=[3/np.average([self.pos[center]-popt[0],popt[1]-self.pos[center]]),.001,self.pos[center],np.average(self.LIAcurrent[i,xmin:xmax])]
             print(p0)
             popt_b,pcov_b=curve_fit(bessel_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
             pcov_b=np.sqrt(np.diag(pcov_b))

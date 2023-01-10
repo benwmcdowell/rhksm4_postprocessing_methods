@@ -4,6 +4,7 @@ from scipy.optimize import curve_fit
 from scipy.fft import fft,fftfreq
 from scipy.signal.windows import hann
 from scipy.signal import savgol_filter
+from scipy.special import j0,y0
 import numpy as np
 import pyperclip
 import csv
@@ -237,6 +238,10 @@ class dIdV_line:
             y=a*h/np.sqrt(x-c)/np.sqrt(2)+b
             return y
         
+        def bessel_fit(x,k,u,x0):
+            y=1-2*u*j0(k*abs(x-x0))*y0(k*abs(x-x0))
+            return y
+        
         center=np.argmin(abs(self.pos-center))
         emin=np.argmin(abs(self.energy-emin))
         emax=np.argmin(abs(self.energy-emax))
@@ -287,6 +292,12 @@ class dIdV_line:
         peak_pos=[]
         peak_energies=[]
         peak_errors=[]
+        pot_fit=[]
+        pot_errors=[]
+        k_fit=[]
+        k_errors=[]
+        x0_fit=[]
+        x0_errors=[]
         
         for i in range(emin,emax+1):
             p0=[(self.pos[center]+self.pos[xmin])/2,(self.pos[xmax]+self.pos[center])/2,max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),0.5,min(self.LIAcurrent[i,xmin:xmax])]
@@ -299,6 +310,18 @@ class dIdV_line:
                          
             energies.append(self.energy[i])
             pcov=np.sqrt(np.diag(pcov))
+            
+            bounds=([0,-10,self.pos[center]-10],[np.inf,10,self.pos[center]+10])
+            p0=[3/np.avg([self.pos[center]-popt[0],popt[1]-self.pos[center]]),0,self.pos[center]]
+            popt_b,pcov_b=curve_fit(bessel_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
+            pcov_b=np.sqrt(np.diag(pcov_b))
+            k_fit.append(popt_b[0])
+            pot_fit.append(popt_b[1])
+            x0_fit.append(popt_b[2])
+            k_errors.append(pcov_b[0])
+            pot_errors.append(pcov_b[1])
+            x0_errors.append(popt_b[2])
+            
             if scatter_side=='both':
                 lengths.append(abs(popt[0]-popt[1]))
                 errors.append(np.sqrt(pcov[0]**2+pcov[1]**2))
@@ -328,6 +351,12 @@ class dIdV_line:
         energies=np.array(energies)
         lengths=np.array(lengths)
         errors=np.array(errors)
+        k_fit=np.array(k_fit)
+        pot_fit=np.array(pot_fit)
+        x0_fit=np.array(x0_fit)
+        k_errors=np.array(k_errors)
+        pot_errors=np.array(pot_errors)
+        x0_errors=np.array(x0_errors)
         k=1.6022e-19 #J/eV
         if linear_fit=='e_independent':
             energies-=onset_energy
@@ -354,10 +383,17 @@ class dIdV_line:
         self.ax_fit.set(ylabel='d / nm')
         self.fig_fit.show()
         pcov=np.sqrt(np.diag(pcov))
+        print('calculated from infinitely-tall potential')
         print('m* = {} +/- {}'.format(popt[0]**-2/m,pcov[0]/popt[0]**3/m))
         print('R = {} +/- {} Angstroms'.format(popt[1]*1e10,pcov[1]*1e10))
         if len(popt)>2:
             print('band onset = {} +/- {} eV'.format(popt[2]/k,pcov[2]/k))
+            
+        popt,pcov=curve_fit(line_fit,(k_fit*1e10)**2,energies,p0=(h**2/2/m,0),y_err=(k_errors*1e10)**2)
+        pcov=np.sqrt(np.diag(pcov))
+        print('calculated from Dirac potential, Bessel functions:')
+        print('m* = {} +/- {}'.format(h**2/popt[0]/2,h**2/pcov[0]/2))
+        print('u = {} +/- {} eV'.format(np.average(pot_errors),np.sqrt(sum(pot_errors**2))))
             
     def plot_fft(self,**args):
         fig,ax=plt.subplots(1,1)

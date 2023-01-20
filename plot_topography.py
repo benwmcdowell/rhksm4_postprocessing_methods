@@ -6,6 +6,7 @@ from scipy.signal import savgol_filter,find_peaks
 from scipy.interpolate import griddata
 from pathos.multiprocessing import ProcessPool
 import json
+import os
 
 class topography:
     def __init__(self,ifile,invert=False,**args):
@@ -270,3 +271,27 @@ class topography:
                 
         return min_angle,v
         
+    
+def calc_drift_from_dir(dpath):
+    files=os.listdir(dpath)
+    os.chdir(dpath)
+    peaks=[]
+    for i in files:
+        peaks.append([])
+        topo=topography(i)
+        topo.line_slope_subtract()
+        topo.add_savgol_filter(5,3)
+        for j in range(2,len(topo.y)-3):
+            for k in range(2,len(topo.x)-3):
+                if np.argmax(topo.data[j-2:j+3,k])==j and np.argmax(topo.data[j,k-2:k+3])==k:
+                    peaks[-1].append(np.array([topo.x[k],topo.x[j]]))
+        
+    displacements=np.zeros(len(peaks)-1)
+    for i in range(1,len(peaks)):
+        tempvar=np.zeros(len(peaks[i])*len(peaks[i-1]))
+        for j in range(len(peaks[i])):
+            for k in range(len(peaks[i-1])):
+                tempvar[j*len(peaks[i-1])+k]=np.linalg.norm(peaks[i,j]-peaks[i-1,k])
+        displacements[i-1]=np.min(tempvar)
+        
+    return displacements

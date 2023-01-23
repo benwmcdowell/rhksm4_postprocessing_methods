@@ -271,8 +271,7 @@ class topography:
                 
         return min_angle,v
         
-    
-def calc_drift_from_dir(dpath):
+def calc_drift_from_dir(dpath,w=5,o=3):
     files=os.listdir(dpath)
     os.chdir(dpath)
     peaks=[]
@@ -280,18 +279,22 @@ def calc_drift_from_dir(dpath):
         peaks.append([])
         topo=topography(i)
         topo.line_slope_subtract()
-        topo.add_savgol_filter(5,3)
+        topo.add_savgol_filter(w,o)
         for j in range(2,len(topo.y)-3):
             for k in range(2,len(topo.x)-3):
-                if np.argmax(topo.data[j-2:j+3,k])==j and np.argmax(topo.data[j,k-2:k+3])==k:
-                    peaks[-1].append(np.array([topo.x[k],topo.x[j]]))
+                if np.argmax(topo.data[j-2:j+3,k])==2 and np.argmax(topo.data[j,k-2:k+3])==2:
+                    peaks[-1].append(np.array([topo.x[k],topo.y[j]]))
+        peaks[-1]=np.array(peaks[-1])
+    peaks=np.array(peaks)
         
     displacements=np.zeros(len(peaks)-1)
     for i in range(1,len(peaks)):
         tempvar=np.zeros(len(peaks[i])*len(peaks[i-1]))
         for j in range(len(peaks[i])):
             for k in range(len(peaks[i-1])):
-                tempvar[j*len(peaks[i-1])+k]=np.linalg.norm(peaks[i,j]-peaks[i-1,k])
+                tempvar[j*len(peaks[i-1])+k]=np.linalg.norm(peaks[i][j]-peaks[i-1][k])
         displacements[i-1]=np.min(tempvar)
         
-    return displacements
+    print('95% CI for drift is {} nm unscaled'.format(np.average(displacements)+2*np.std(displacements)))
+        
+    return displacements,peaks

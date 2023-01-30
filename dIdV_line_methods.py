@@ -121,19 +121,25 @@ class dIdV_line:
     def clear_energy_axes(self):
         self.ax_eslice.clear()
         
-    def plot_energy_slice(self,energy):
+    def plot_energy_slice(self,energy,plot_bessel_fits=False):
         if not hasattr(self,'fig_slice'):
             self.fig_eslice,self.ax_eslice=plt.subplots(1,1,tight_layout=True)
+        counter=0
         if type(energy)==list:
             for e in energy:
                 i=np.argmin(abs(self.energy-e))
-                self.ax_eslice.plot(self.pos,self.LIAcurrent[i],label='{} eV'.format(e))
-                self.ax_main.plot([self.pos[0],self.pos[-1]],[e,e])
+                tempdata=self.ax_eslice.plot(self.pos,self.LIAcurrent[i],label='{} eV'.format(e))
+                color=tempdata[0].get_color()
+                self.ax_main.plot([self.pos[0],self.pos[-1]],[e,e],c=color)
                 if self.energy[i] in self.peak_energies:
                     for j in range(len(self.peak_energies)):
                         if self.energy[i]==self.peak_energies[j]:
                             x=np.argmin(abs(self.peak_pos[j]-self.pos))
                             self.ax_eslice.errorbar(self.peak_pos[j],self.LIAcurrent[i,x],xerr=self.peak_errors[j],c='black',fmt='o')
+                if self.energy[i] in self.bessel_energies and plot_bessel_fits:
+                    for j in range(len(self.bessel_energies)):
+                        if self.energy[i]==self.bessel_energies[j]:
+                            self.ax_eslice.plot(self.bessel_x[j],self.bessel_y[j],c=color)
         else:
             i=np.argmin(abs(self.energy-energy))
             self.ax_eslice.plot(self.pos,self.LIAcurrent[i])
@@ -238,11 +244,12 @@ class dIdV_line:
             y=a*h/np.sqrt(x-c)/np.sqrt(2)+b
             return y
         
-        def bessel_fit(x,k,u,x0,b):
-            y=1-2*u*j0(k*abs(x-x0))*y0(k*abs(x-x0))+b
+        def bessel_fit(x,k,u,x0,b,max_val):
+            #max_val=1
+            y=-2*u*j0(k*abs(x-x0))*y0(k*abs(x-x0))+b
             for i in range(len(y)):
-                if abs(y[i])>0.5*abs(u):
-                    y[i]=u
+                if abs(y[i]-b)>max_val*abs(u):
+                    y[i]=u*max_val+b
             return y
         
         center=np.argmin(abs(self.pos-center))
@@ -301,6 +308,9 @@ class dIdV_line:
         k_errors=[]
         x0_fit=[]
         x0_errors=[]
+        bessel_x=[]
+        bessel_y=[]
+        bessel_energies=[]
         
         for i in range(emin,emax+1):
             p0=[(self.pos[center]+self.pos[xmin])/2,(self.pos[xmax]+self.pos[center])/2,max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),0.5,min(self.LIAcurrent[i,xmin:xmax])]
@@ -314,8 +324,8 @@ class dIdV_line:
             energies.append(self.energy[i])
             pcov=np.sqrt(np.diag(pcov))
             
-            bounds=([0,-10,self.pos[center]-10,-np.inf],[np.inf,10,self.pos[center]+10,np.inf])
-            p0=[3/np.average([self.pos[center]-popt[0],popt[1]-self.pos[center]]),.001,self.pos[center],np.average(self.LIAcurrent[i,xmin:xmax])]
+            bounds=([0,-1,self.pos[center]-30,-np.inf,0],[np.inf,1,self.pos[center]+30,np.inf,1.5])
+            p0=[3/np.abs(popt[0]-popt[1]),-0.001,self.pos[center],np.average(self.LIAcurrent[i,xmin:xmax]),0.8]
             popt_b,pcov_b=curve_fit(bessel_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
             pcov_b=np.sqrt(np.diag(pcov_b))
             k_fit.append(popt_b[0])
@@ -324,6 +334,9 @@ class dIdV_line:
             k_errors.append(pcov_b[0])
             pot_errors.append(pcov_b[1])
             x0_errors.append(popt_b[2])
+            bessel_y.append(bessel_fit(self.pos[xmin:xmax],popt_b[0],popt_b[1],popt_b[2],popt_b[3],popt_b[4]))
+            bessel_x.append(self.pos[xmin:xmax])
+            bessel_energies.append(self.energy[i])
             
             if scatter_side=='both':
                 lengths.append(abs(popt[0]-popt[1]))
@@ -349,6 +362,9 @@ class dIdV_line:
         self.peak_pos=peak_pos
         self.peak_energies=peak_energies
         self.peak_errors=peak_errors
+        self.bessel_y=bessel_y
+        self.bessel_x=bessel_x
+        self.bessel_energies=bessel_energies
             
         self.fig_fit,self.ax_fit=plt.subplots(1,1,tight_layout=True)
         energies=np.array(energies)
@@ -392,11 +408,22 @@ class dIdV_line:
         if len(popt)>2:
             print('band onset = {} +/- {} eV'.format(popt[2]/k,pcov[2]/k))
             
-        popt,pcov=curve_fit(line_fit,(k_fit*1e10)**2,energies,p0=(h**2/2/m,0),sigma=(k_errors*1e10)**2)
+        k_fit*=1e10
+        k_errors*=1e10
+        tempx=np.array([(k_fit**2)[i] for i in [0,-1]])
+        tempy=np.array([(energies)[i] for i in [0,-1]])
+        p0=((tempy[1]-tempy[0])/(tempx[1]-tempx[0]),tempy[0]-(tempy[1]-tempy[0])/(tempx[1]-tempx[0])*tempx[0])
+        plt.plot(tempx,line_fit(tempx,p0[0],p0[1]))
+        popt,pcov=curve_fit(line_fit,(k_fit)**2,energies,p0=p0,sigma=(k_errors)**2)
         pcov=np.sqrt(np.diag(pcov))
+        self.fig_bfit,self.ax_bfit=plt.subplots(1,1,tight_layout=True)
+        self.ax_bfit.errorbar(k_fit**2,energies,xerr=k_errors**2,fmt='o')
+        self.ax_bfit.plot(k_fit**2,line_fit(k_fit**2,popt[0],popt[1]))
+        self.fig_bfit.show()
+        
         print('calculated from Dirac potential, Bessel functions:')
-        print('m* = {} +/- {}'.format(h**2/popt[0]/2,h**2/pcov[0]/2))
-        print('u = {} +/- {} eV'.format(np.average(pot_errors),np.sqrt(sum(pot_errors**2))))
+        print('m* = {} +/- {}'.format(h**2/popt[0]/2/m,h**2/popt[0]**2/2/m*pcov[0]*(h**2/popt[0]/2/m)))
+        print('u = {} +/- {} eV'.format(np.average(pot_fit),np.sqrt(sum(pot_errors**2))))
             
     def plot_fft(self,**args):
         fig,ax=plt.subplots(1,1)

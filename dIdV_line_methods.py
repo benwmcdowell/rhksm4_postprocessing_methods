@@ -232,7 +232,7 @@ class dIdV_line:
     def overlay_center(self,pos):
         self.centerline=self.ax_main.plot([pos,pos],[self.energy[0],self.energy[-1]],color='white',linestyle='dashed')
         
-    def find_scattering_length(self,emin,emax,center,exclude_from_fit=None,**args):
+    def find_scattering_length(self,emin,emax,center,exclude_from_fit=None,tempsf=1.0,**args):
         def gauss_fit(x,x1,x2,A1,A2,s,y0):
             y=A1*np.exp(-(x-x1)**2/s/2)+A2*np.exp(-(x-x2)**2/s/2)+y0
             return y
@@ -425,8 +425,8 @@ class dIdV_line:
         if len(popt)>2:
             print('band onset = {} +/- {} eV'.format(popt[2]/k,pcov[2]/k))
             
-        k_fit*=1e10
-        k_errors*=1e10
+        k_fit*=1e10*tempsf
+        k_errors*=1e10*tempsf
         tempx=np.array([(k_fit**2)[i] for i in [0,-1]])
         tempy=np.array([(energies)[i] for i in [0,-1]])
         p0=((tempy[1]-tempy[0])/(tempx[1]-tempx[0]),tempy[0]-(tempy[1]-tempy[0])/(tempx[1]-tempx[0])*tempx[0])

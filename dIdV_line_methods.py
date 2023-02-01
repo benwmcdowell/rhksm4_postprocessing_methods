@@ -335,9 +335,11 @@ class dIdV_line:
             if not self.exclude_from_fit:
                 popt_b,pcov_b=curve_fit(bessel_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
                 bessel_x.append(self.pos[xmin:xmax])
+                bessel_y.append(bessel_fit(self.pos[xmin:xmax],popt_b[0],popt_b[1],popt_b[2],popt_b[3],popt_b[4]))
             else:
-                popt_b,pcov_b=curve_fit(bessel_fit,np.concatonate(self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax]),self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
-                bessel_x.append(np.concatonate(self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax]))
+                popt_b,pcov_b=curve_fit(bessel_fit,np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])),np.concatenate((self.LIAcurrent[i,xmin:self.exclude_from_fit[0]],self.LIAcurrent[i,self.exclude_from_fit[1]:xmax])),p0=p0,bounds=bounds)
+                bessel_x.append(np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])))
+                bessel_y.append(bessel_fit(np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])),popt_b[0],popt_b[1],popt_b[2],popt_b[3],popt_b[4]))
             pcov_b=np.sqrt(np.diag(pcov_b))
             k_fit.append(popt_b[0])
             pot_fit.append(popt_b[1])
@@ -345,8 +347,6 @@ class dIdV_line:
             k_errors.append(pcov_b[0])
             pot_errors.append(pcov_b[1])
             x0_errors.append(popt_b[2])
-            bessel_y.append(bessel_fit(self.pos[xmin:xmax],popt_b[0],popt_b[1],popt_b[2],popt_b[3],popt_b[4]))
-            
             bessel_energies.append(self.energy[i])
             
             if scatter_side=='both':

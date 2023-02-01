@@ -230,7 +230,7 @@ class dIdV_line:
     def overlay_center(self,pos):
         self.centerline=self.ax_main.plot([pos,pos],[self.energy[0],self.energy[-1]],color='white',linestyle='dashed')
         
-    def find_scattering_length(self,emin,emax,center,**args):
+    def find_scattering_length(self,emin,emax,center,exclude_from_fit=None,**args):
         def gauss_fit(x,x1,x2,A1,A2,s,y0):
             y=A1*np.exp(-(x-x1)**2/s/2)+A2*np.exp(-(x-x2)**2/s/2)+y0
             return y
@@ -247,14 +247,20 @@ class dIdV_line:
         def bessel_fit(x,k,u,x0,b,max_val):
             #max_val=1
             y=-2*u*j0(k*abs(x-x0))*y0(k*abs(x-x0))+b
-            for i in range(len(y)):
-                if abs(y[i]-b)>max_val*abs(u):
-                    y[i]=u*max_val+b
+            if not self.exclude_from_fit:
+                for i in range(len(y)):
+                    if abs(y[i]-b)>max_val*abs(u):
+                        y[i]=u*max_val+b
             return y
         
         center=np.argmin(abs(self.pos-center))
         emin=np.argmin(abs(self.energy-emin))
         emax=np.argmin(abs(self.energy-emax))
+        
+        if exclude_from_fit:
+            self.exclude_from_fit=[np.argmin(abs(self.pos-i)) for i in exclude_from_fit]
+        else:
+            self.exclude_from_fit=None
         
         if 'xrange' in args:
             xmin=np.argmin(abs(self.pos-args['xrange'][0]))
@@ -324,9 +330,14 @@ class dIdV_line:
             energies.append(self.energy[i])
             pcov=np.sqrt(np.diag(pcov))
             
-            bounds=([0,-1,self.pos[center]-30,-np.inf,0],[np.inf,1,self.pos[center]+30,np.inf,1.5])
-            p0=[3/np.abs(popt[0]-popt[1]),-0.001,self.pos[center],np.average(self.LIAcurrent[i,xmin:xmax]),0.8]
-            popt_b,pcov_b=curve_fit(bessel_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
+            bounds=([0,-1,self.pos[center]-30,-np.inf,0],[np.inf,1,self.pos[center]+30,np.inf,0.8])
+            p0=[3/np.abs(popt[0]-popt[1]),-0.001,self.pos[center],np.average(self.LIAcurrent[i,xmin:xmax]),0.5]
+            if not self.exclude_from_fit:
+                popt_b,pcov_b=curve_fit(bessel_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
+                bessel_x.append(self.pos[xmin:xmax])
+            else:
+                popt_b,pcov_b=curve_fit(bessel_fit,np.concatonate(self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax]),self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
+                bessel_x.append(np.concatonate(self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax]))
             pcov_b=np.sqrt(np.diag(pcov_b))
             k_fit.append(popt_b[0])
             pot_fit.append(popt_b[1])
@@ -335,7 +346,7 @@ class dIdV_line:
             pot_errors.append(pcov_b[1])
             x0_errors.append(popt_b[2])
             bessel_y.append(bessel_fit(self.pos[xmin:xmax],popt_b[0],popt_b[1],popt_b[2],popt_b[3],popt_b[4]))
-            bessel_x.append(self.pos[xmin:xmax])
+            
             bessel_energies.append(self.energy[i])
             
             if scatter_side=='both':
@@ -423,7 +434,7 @@ class dIdV_line:
         
         print('calculated from Dirac potential, Bessel functions:')
         print('m* = {} +/- {}'.format(h**2/popt[0]/2/m,h**2/popt[0]**2/2/m*pcov[0]*(h**2/popt[0]/2/m)))
-        print('u = {} +/- {} eV'.format(np.average(pot_fit),np.sqrt(sum(pot_errors**2))))
+        print('u = {} +/- {}'.format(np.average(pot_fit),np.sqrt(sum(pot_errors**2))))
             
     def plot_fft(self,**args):
         fig,ax=plt.subplots(1,1)

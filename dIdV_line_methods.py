@@ -26,6 +26,8 @@ class dIdV_line:
         self.pos=np.array([self.f[0].attrs['RHK_Xoffset']+i*self.f[0].attrs['RHK_Xscale'] for i in range(self.size)])*1.0e10/self.sf 
         self.fb_off=fb_off
         self.norm_z=norm_z
+        self.peak_energies=[]
+        self.bessel_energies=[]
         
         if self.fb_off:
             self.npts=int(np.shape(self.f[4].data)[1])
@@ -331,12 +333,14 @@ class dIdV_line:
             pcov=np.sqrt(np.diag(pcov))
             
             bounds=([0,-1,self.pos[center]-30,-np.inf,0],[np.inf,1,self.pos[center]+30,np.inf,0.8])
-            p0=[3/np.abs(popt[0]-popt[1]),-0.001,self.pos[center],np.average(self.LIAcurrent[i,xmin:xmax]),0.5]
+            
             if not self.exclude_from_fit:
+                p0=[3/np.abs(popt[0]-popt[1]),-0.001,self.pos[center],np.average(self.LIAcurrent[i,xmin:xmax]),0.5]
                 popt_b,pcov_b=curve_fit(bessel_fit,self.pos[xmin:xmax],self.LIAcurrent[i,xmin:xmax],p0=p0,bounds=bounds)
                 bessel_x.append(self.pos[xmin:xmax])
                 bessel_y.append(bessel_fit(self.pos[xmin:xmax],popt_b[0],popt_b[1],popt_b[2],popt_b[3],popt_b[4]))
             else:
+                p0=[3/np.abs(popt[0]-popt[1]),-0.001,self.pos[center],np.average(np.concatenate((self.LIAcurrent[i,xmin:self.exclude_from_fit[0]],self.LIAcurrent[i,self.exclude_from_fit[1]:xmax]))),0.5]
                 popt_b,pcov_b=curve_fit(bessel_fit,np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])),np.concatenate((self.LIAcurrent[i,xmin:self.exclude_from_fit[0]],self.LIAcurrent[i,self.exclude_from_fit[1]:xmax])),p0=p0,bounds=bounds)
                 bessel_x.append(np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])))
                 bessel_y.append(bessel_fit(np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])),popt_b[0],popt_b[1],popt_b[2],popt_b[3],popt_b[4]))

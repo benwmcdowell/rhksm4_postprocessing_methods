@@ -332,7 +332,7 @@ class dIdV_line:
             energies.append(self.energy[i])
             pcov=np.sqrt(np.diag(pcov))
             
-            bounds=([0,-1,self.pos[center]-30,-np.inf,0],[np.inf,1,self.pos[center]+30,np.inf,0.8])
+            bounds=([3/np.abs(self.pos[xmax]-self.pos[xmin]),-.01,self.pos[center]-30,0,0],[np.inf,.01,self.pos[center]+30,np.inf,0.8])
             
             if not self.exclude_from_fit:
                 p0=[3/np.abs(popt[0]-popt[1]),-0.001,self.pos[center],np.average(self.LIAcurrent[i,xmin:xmax]),0.5]
@@ -402,6 +402,7 @@ class dIdV_line:
             lengths*=2.0
         errors*=1e-10
         h=6.626e-34 #J*s
+        hbar=h/2/np.pi
         m=9.10938356e-31 #kg
         self.energies=energies
         self.lengths=lengths
@@ -439,7 +440,7 @@ class dIdV_line:
         self.fig_bfit.show()
         
         print('calculated from Dirac potential, Bessel functions:')
-        print('m* = {} +/- {}'.format(h**2/popt[0]/2/m,h**2/popt[0]**2/2/m*pcov[0]*(h**2/popt[0]/2/m)))
+        print('m* = {} +/- {}'.format(hbar**2/popt[0]/2/m,hbar**2/popt[0]**2/2/m*pcov[0]*(hbar**2/popt[0]/2/m)))
         print('u = {} +/- {}'.format(np.average(pot_fit),np.sqrt(sum(pot_errors**2))))
             
     def plot_fft(self,**args):

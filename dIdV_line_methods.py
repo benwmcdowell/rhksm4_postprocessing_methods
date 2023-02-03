@@ -465,10 +465,12 @@ class dIdV_line:
         fig.show()
         
     def add_savgol_filter(self,w,o,horizontal=True,vertical=True):
-        for i in range(len(self.energy)):
-            self.LIAcurrent[i]=savgol_filter(self.LIAcurrent[i],w,o)
-        for i in range(len(self.pos)):
-            self.LIAcurrent[:,i]=savgol_filter(self.LIAcurrent[:,i],w,o)
+        if horizontal:
+            for i in range(len(self.energy)):
+                self.LIAcurrent[i]=savgol_filter(self.LIAcurrent[i],w,o)
+        if vertical:
+            for i in range(len(self.pos)):
+                self.LIAcurrent[:,i]=savgol_filter(self.LIAcurrent[:,i],w,o)
             
     def copy_peaks(self,cutoff=1e-9):
         tempvar=''

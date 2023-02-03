@@ -319,6 +319,8 @@ class dIdV_line:
         bessel_x=[]
         bessel_y=[]
         bessel_energies=[]
+        self.bessel_fit_params=[]
+        self.bessel_fit_errors=[]
         
         for i in range(emin,emax+1):
             p0=[(self.pos[center]+self.pos[xmin])/2,(self.pos[xmax]+self.pos[center])/2,max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),max(self.LIAcurrent[i,xmin:xmax])-min(self.LIAcurrent[i,xmin:xmax]),0.5,min(self.LIAcurrent[i,xmin:xmax])]
@@ -347,6 +349,8 @@ class dIdV_line:
                 bessel_x.append(np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])))
                 bessel_y.append(bessel_fit(np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])),popt_b[0],popt_b[1],popt_b[2],popt_b[3],popt_b[4]))
             pcov_b=np.sqrt(np.diag(pcov_b))
+            self.bessel_fit_params.append(popt_b)
+            self.bessel_fit_errors.append(pcob_b)
             k_fit.append(popt_b[0])
             pot_fit.append(popt_b[1])
             x0_fit.append(popt_b[2])
@@ -460,7 +464,7 @@ class dIdV_line:
         ax.set(xlabel='momentum / $\AA^{-1}$')
         fig.show()
         
-    def add_savgol_filter(self,w,o):
+    def add_savgol_filter(self,w,o,horizontal=True,vertical=True):
         for i in range(len(self.energy)):
             self.LIAcurrent[i]=savgol_filter(self.LIAcurrent[i],w,o)
         for i in range(len(self.pos)):

@@ -238,6 +238,7 @@ class dIdV_line:
             return y
         
         def line_fit(x,a,b):
+            #b=1.6342441425316037e-20
             y=a*x+b
             return y
         
@@ -345,12 +346,25 @@ class dIdV_line:
                 middle=np.average(np.concatenate((self.LIAcurrent[i,xmin:self.exclude_from_fit[0]],self.LIAcurrent[i,self.exclude_from_fit[1]:xmax])))
                 peak=-1*np.max(abs(np.concatenate((self.LIAcurrent[i,xmin:self.exclude_from_fit[0]],self.LIAcurrent[i,self.exclude_from_fit[1]:xmax]))-middle))*2/5
                 p0=[3/np.abs(popt[0]-popt[1]),peak,self.pos[center],middle,0.5]
-                popt_b,pcov_b=curve_fit(bessel_fit,np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])),np.concatenate((self.LIAcurrent[i,xmin:self.exclude_from_fit[0]],self.LIAcurrent[i,self.exclude_from_fit[1]:xmax])),p0=p0,bounds=bounds,maxfev=5000)
-                bessel_x.append(np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])))
-                bessel_y.append(bessel_fit(np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])),popt_b[0],popt_b[1],popt_b[2],popt_b[3],popt_b[4]))
+                
+                if scatter_side=='both':
+                    popt_b,pcov_b=curve_fit(bessel_fit,np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])),np.concatenate((self.LIAcurrent[i,xmin:self.exclude_from_fit[0]],self.LIAcurrent[i,self.exclude_from_fit[1]:xmax])),p0=p0,bounds=bounds,maxfev=5000)
+                    bessel_x.append(np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])))
+                    bessel_y.append(bessel_fit(np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])),popt_b[0],popt_b[1],popt_b[2],popt_b[3],popt_b[4]))
+                    
+                if scatter_side=='left':
+                    popt_b,pcov_b=curve_fit(bessel_fit,self.pos[xmin:self.exclude_from_fit[0]],self.LIAcurrent[i,xmin:self.exclude_from_fit[0]],p0=p0,bounds=bounds,maxfev=5000)
+                    bessel_x.append(self.pos[xmin:self.exclude_from_fit[0]])
+                    bessel_y.append(bessel_fit(self.pos[xmin:self.exclude_from_fit[0]],popt_b[0],popt_b[1],popt_b[2],popt_b[3],popt_b[4]))
+                    
+                if scatter_side=='right':
+                    popt_b,pcov_b=curve_fit(bessel_fit,self.pos[self.exclude_from_fit[1]:xmax],self.LIAcurrent[i,self.exclude_from_fit[1]:xmax],p0=p0,bounds=bounds,maxfev=5000)
+                    bessel_x.append(self.pos[self.exclude_from_fit[1]:xmax])
+                    bessel_y.append(bessel_fit(self.pos[self.exclude_from_fit[1]:xmax],popt_b[0],popt_b[1],popt_b[2],popt_b[3],popt_b[4]))
+                    
             pcov_b=np.sqrt(np.diag(pcov_b))
             self.bessel_fit_params.append(popt_b)
-            self.bessel_fit_errors.append(pcob_b)
+            self.bessel_fit_errors.append(pcov_b)
             k_fit.append(popt_b[0])
             pot_fit.append(popt_b[1])
             x0_fit.append(popt_b[2])

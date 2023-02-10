@@ -335,7 +335,7 @@ class dIdV_line:
             energies.append(self.energy[i])
             pcov=np.sqrt(np.diag(pcov))
             
-            bounds=([3/np.abs(self.pos[xmax]-self.pos[xmin]),-.01,self.pos[center]-30,0,0],[np.inf,.01,self.pos[center]+30,np.inf,0.8])
+            bounds=([3/np.abs(self.pos[xmax]-self.pos[xmin]),-.01,self.pos[center]-30,-np.inf,0],[np.inf,.01,self.pos[center]+30,np.inf,0.8])
             
             if not self.exclude_from_fit:
                 p0=[3/np.abs(popt[0]-popt[1]),-0.001,self.pos[center],np.average(self.LIAcurrent[i,xmin:xmax]),0.5]

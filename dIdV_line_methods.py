@@ -70,9 +70,12 @@ class dIdV_line:
             y=A*np.cos(phi+x*2.0*np.pi/k)+y0
             return y
         
+        self.periodic_potential_params=[]
+        
         for i in range(self.npts):
             params=curve_fit(model_cosine,self.pos,self.LIAcurrent[i])
             fit=model_cosine(self.pos,params[0][0],params[0][1],params[0][2])
+            self.periodic_potential_params.append(params)
             self.LIAcurrent[i]-=fit
             
     def plot_fit_residuals(self,**args):
@@ -348,12 +351,12 @@ class dIdV_line:
                 p0=[3/np.abs(popt[0]-popt[1]),peak,self.pos[center],middle,0.5]
                 
                 if scatter_side=='both':
-                    popt_b,pcov_b=curve_fit(bessel_fit,np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])),np.concatenate((self.LIAcurrent[i,xmin:self.exclude_from_fit[0]],self.LIAcurrent[i,self.exclude_from_fit[1]:xmax])),p0=p0,bounds=bounds,maxfev=5000)
+                    popt_b,pcov_b=curve_fit(bessel_fit,np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])),np.concatenate((self.LIAcurrent[i,xmin:self.exclude_from_fit[0]],self.LIAcurrent[i,self.exclude_from_fit[1]:xmax])),p0=p0,bounds=bounds,maxfev=25000)
                     bessel_x.append(np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])))
                     bessel_y.append(bessel_fit(np.concatenate((self.pos[xmin:self.exclude_from_fit[0]],self.pos[self.exclude_from_fit[1]:xmax])),popt_b[0],popt_b[1],popt_b[2],popt_b[3],popt_b[4]))
                     
                 if scatter_side=='left':
-                    popt_b,pcov_b=curve_fit(bessel_fit,self.pos[xmin:self.exclude_from_fit[0]],self.LIAcurrent[i,xmin:self.exclude_from_fit[0]],p0=p0,bounds=bounds,maxfev=5000)
+                    popt_b,pcov_b=curve_fit(bessel_fit,self.pos[xmin:self.exclude_from_fit[0]],self.LIAcurrent[i,xmin:self.exclude_from_fit[0]],p0=p0,bounds=bounds,maxfev=25000)
                     bessel_x.append(self.pos[xmin:self.exclude_from_fit[0]])
                     bessel_y.append(bessel_fit(self.pos[xmin:self.exclude_from_fit[0]],popt_b[0],popt_b[1],popt_b[2],popt_b[3],popt_b[4]))
                     

@@ -154,9 +154,13 @@ class dIdV_line:
         self.ax_eslice.legend()
         self.fig_eslice.show()
         
-    def plot_position_slice(self,pos,plot_onsets=False,exclude_range=None,**args):
+    def plot_position_slice(self,pos,plot_onsets=False,exclude_range=None,print_onsets=False,**args):
         def cos(x,a,b,f,phi):
             y=a*np.cos(f*2*np.pi*x+phi)+b
+            return y
+        
+        def lorentzian(x,x0,g,a,y0):
+            y=a*(0.5*g/((x-x0)**2+(.5*g)**2))+y0
             return y
         
         if 'find_onset' in args:
@@ -202,12 +206,16 @@ class dIdV_line:
                     else:
                         onset_height=(np.max(self.LIAcurrent[onset_range[0]:onset_range[1],i])+np.min(self.LIAcurrent[onset_range[0]:onset_range[1],i]))/2
         
-                        onsets.append(self.energy[np.argmin(abs(self.LIAcurrent[:,i]-onset_height))])
+                        onsets.append(self.energy[onset_range[0]+np.argmin(abs(self.LIAcurrent[onset_range[0]:onset_range[1],i]-onset_height))])
                         self.ax_pslice.plot([onsets[-1] for j in range(2)],[min(self.LIAcurrent[[onset_range[0],onset_range[1]],i]),max(self.LIAcurrent[[onset_range[0],onset_range[1]],i])],label='onset')
                         onset_pos.append(p)
                         
         if find_onset:
             print('average 2d band onset: {} +/- {} eV'.format(np.mean(onsets),np.std(onsets)))
+            
+        if print_onsets:
+            for i in onsets:
+                print(i)
             
         if plot_onsets:
             self.fig_onsets,self.ax_onsets=plt.subplots(1,1,tight_layout=True)
@@ -419,9 +427,11 @@ class dIdV_line:
             energies-=onset_energy
         energies*=k
         lengths*=1e-10
+        lengths/=tempsf
         if scatter_side!='both':
             lengths*=2.0
         errors*=1e-10
+        errors/=tempsf
         h=6.626e-34 #J*s
         hbar=h/2/np.pi
         m=9.10938356e-31 #kg

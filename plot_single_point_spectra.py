@@ -23,12 +23,22 @@ def get_single_point(ifile,filter_params=(0,0),**args):
     
     ydata=np.zeros(np.shape(f[0].data)[1])
     xdata=np.zeros(np.shape(f[0].data)[1])
+    zdata=np.zeros(np.shape(f[0].data)[1])
     for i in average:
         tempvar=f[page_num].data[i]*f[page_num].attrs['RHK_Zscale']+f[page_num].attrs['RHK_Zoffset'] #LIA current in pA
         if filter_params!=(0,0):
             tempvar=savgol_filter(tempvar,filter_params[0],filter_params[1])
         ydata+=tempvar
     ydata/=len(average)
+    try:
+        for i in average:
+            tempvar=f[2].data[i]*f[2].attrs['RHK_Zscale']+f[2].attrs['RHK_Zoffset'] #LIA current in pA
+            if filter_params!=(0,0):
+                tempvar=savgol_filter(tempvar,filter_params[0],filter_params[1])
+            zdata+=tempvar
+        zdata/=len(average)
+    except IndexError:
+        pass
     xdata+=[f[0].attrs['RHK_Xoffset']+i*f[0].attrs['RHK_Xscale'] for i in range(len(ydata))] #bias in V
     setpoint=f[0].attrs['RHK_Current']/1e-12 #current setpoint in pA
     
@@ -39,7 +49,17 @@ def get_single_point(ifile,filter_params=(0,0),**args):
     xdata=xdata[::-1]
     ydata=ydata[::-1]
     
-    return xdata,ydata,setpoint,scan_num
+    return xdata,ydata,setpoint,scan_num,zdata
+
+def copy_peak_data(ifile):
+    xdata,ydata,setpoint,scan_num,zdata=get_single_point(ifile)
+    peak_width=5
+    peak_height=0.25*np.max(ydata)-np.min(ydata)
+    peak_indices=find_peaks(ydata,width=peak_width,height=peak_height)[0]
+    peak_energies=[xdata[i] for i in peak_indices]
+    z_vals=[zdata[i]*1e9 for i in peak_indices]
+    
+    return peak_energies,z_vals
 
 def plot_single_point(ifiles,**args):
     if 'normalize' in args:
@@ -79,7 +99,7 @@ def plot_single_point(ifiles,**args):
     setpoints=[]
     num=len(ifiles)
     for i in ifiles:
-        tempvar=get_single_point(i,total_current=total_current,filter_params=filter_params)
+        tempvar=get_single_point(i,total_current=total_current,filter_params=filter_params)[:4]
         xdata.append(tempvar[0])
         ydata.append(tempvar[1])
         setpoints.append(tempvar[2])

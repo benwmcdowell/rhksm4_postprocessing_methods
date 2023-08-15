@@ -4,6 +4,7 @@ from scipy.optimize import curve_fit
 import numpy as np
 from scipy.signal import find_peaks
 from scipy.signal import savgol_filter
+import pyperclip
 
 def get_single_point(ifile,filter_params=(0,0),**args):
     f=rhksm4.load(ifile)
@@ -48,18 +49,29 @@ def get_single_point(ifile,filter_params=(0,0),**args):
     #reverses data to be in logical bias progression
     xdata=xdata[::-1]
     ydata=ydata[::-1]
+    zdata=zdata[::-1]
     
     return xdata,ydata,setpoint,scan_num,zdata
 
-def copy_peak_data(ifile):
+def copy_peak_data(ifile,print_z_min=True):
     xdata,ydata,setpoint,scan_num,zdata=get_single_point(ifile)
     peak_width=5
     peak_height=0.25*np.max(ydata)-np.min(ydata)
     peak_indices=find_peaks(ydata,width=peak_width,height=peak_height)[0]
-    peak_energies=[xdata[i] for i in peak_indices]
-    z_vals=[zdata[i]*1e9 for i in peak_indices]
+    peak_energies=[str(xdata[i]) for i in peak_indices][::-1]
+    z_vals=[str(zdata[i]*1e9) for i in peak_indices][::-1]
     
-    return peak_energies,z_vals
+    if print_z_min:
+        print('minimum z value: {} nm'.format(zdata[-1]*1e9))
+    
+    tempvar=''
+    for i,j in zip(peak_energies,z_vals):
+        tempvar+=i
+        tempvar+='\t'
+        tempvar+=j
+        tempvar+='\n'
+        
+    pyperclip.copy(tempvar)
 
 def plot_single_point(ifiles,**args):
     if 'normalize' in args:

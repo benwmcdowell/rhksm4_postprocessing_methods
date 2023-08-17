@@ -55,7 +55,7 @@ def get_single_point(ifile,filter_params=(0,0),**args):
 
 def copy_peak_data(ifile,print_z_min=True):
     xdata,ydata,setpoint,scan_num,zdata=get_single_point(ifile)
-    peak_width=5
+    peak_width=2
     peak_height=0.25*np.max(ydata)-np.min(ydata)
     peak_indices=find_peaks(ydata,width=peak_width,height=peak_height)[0]
     peak_energies=[str(xdata[i]) for i in peak_indices][::-1]

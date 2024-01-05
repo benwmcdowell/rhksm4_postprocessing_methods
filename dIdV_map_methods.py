@@ -119,6 +119,7 @@ class dIdV_map():
             plt.xlabel('position / nm')
             plt.ylabel('position / nm')
             plt.colorbar()
+            plt.gca().set_aspect('equal')
             plt.show()
             
     def export_to_ASCII(self,filepath):
